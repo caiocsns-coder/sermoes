@@ -1,6 +1,6 @@
 // Teste de fumaça: abre docs/index.html como se estivesse no GitHub Pages (https://app.test/),
 // com a API simulada (tools/mock-server.js + src/Seed.gs) e o login do Google simulado.
-// Cobre: login, código de pareamento (app instalado), inserir blocos, busca de versículo, seleção, desfazer, tempo por parte,
+// Cobre: login, código de pareamento (app instalado), inserir blocos, citações de Ellen White, busca de versículo, seleção, desfazer, tempo por parte,
 // salvamento automático, conflito, sessão vencida, busca na lista, importar/exportar, modo sem internet e Pregar.
 const fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
@@ -22,6 +22,14 @@ const GIS_FALSO = `window.google={accounts:{id:{
 
 const srv = criarServidor(fs.readFileSync(path.join(root, 'src/Seed.gs'), 'utf8'));
 const ESPERA = 3300;
+/* avança a hora da página e confere (o fastForward do Playwright às vezes é ignorado logo depois de um runFor) */
+const avancar = async (pg, ms) => {
+  const antes = await pg.evaluate(() => Date.now());
+  for (let k = 0; k < 5 && (await pg.evaluate(() => Date.now())) < antes + ms; k++) {
+    await pg.clock.setSystemTime(antes + ms + 50); await pg.clock.runFor(600);
+  }
+  if ((await pg.evaluate(() => Date.now())) < antes + ms) throw new Error('relógio do teste não avançou');
+};
 const foto = async (pg, nome) => { if (process.env.SHOTS) await pg.screenshot({ path: path.join(process.env.SHOTS, nome + '.png') }); }; // SHOTS=pasta npm test // um pouco mais que o salvamento automático (2,5 s)
 
 (async () => {
@@ -87,6 +95,30 @@ const foto = async (pg, nome) => { if (process.env.SHOTS) await pg.screenshot({ 
   await p.fill('[data-f="ins"][data-t="1"]', 'Frase de teste'); await p.press('[data-f="ins"][data-t="1"]', 'Enter');
   const tipos = await p.locator('.bl[data-t="1"]').evaluateAll(els => els.slice(-3).map(e => e.className));
   if (await p.locator('.bl[data-t="1"]').count() !== antes + 3 || !/t-lista/.test(tipos[0]) || !/t-biblico/.test(tipos[1]) || !/t-texto/.test(tipos[2])) await falhar('inserir blocos', tipos);
+  passou();
+
+  // citação de Ellen White: /e, colar do EGW Writings com {código}, marca "conferida"
+  const conferir = async () => { const m = (await p.locator('#tlcap').innerText()).match(/(\d+) citaç(?:ão|ões) a conferir/); return m ? +m[1] : 0; };
+  const antesConf = await conferir();
+  await p.fill('[data-f="ins"][data-t="1"]', '/e'); await p.press('[data-f="ins"][data-t="1"]', 'Enter');
+  const cit = () => p.locator('.bl.t-citacao[data-t="1"]').last();
+  if (await cit().locator('[data-f="fonte"]').inputValue() !== 'Ellen G. White, ') await falhar('inserir citação de Ellen White');
+  await cit().locator('[data-f="texto"]').evaluate((el, txt) => {
+    const dt = new DataTransfer(); dt.setData('text/plain', txt);
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  }, '“Com a vigilante espera, combinam ativo serviço.” {DTN 558.2}');
+  await p.waitForTimeout(200);
+  const fonteCol = await cit().locator('[data-f="fonte"]').inputValue(), textoCol = await cit().locator('[data-f="texto"]').inputValue();
+  if (fonteCol !== 'Ellen G. White, O Desejado de Todas as Nações, p. 558 (DTN 558.2)' || textoCol !== 'Com a vigilante espera, combinam ativo serviço.') await falhar('colar do EGW Writings', fonteCol + ' | ' + textoCol);
+  if (await conferir() !== antesConf + 1) await falhar('contador de citações a conferir', await conferir());
+  await cit().scrollIntoViewIfNeeded(); await foto(p, 'citacao');
+  await cit().locator('[data-f="conferida"]').check(); await p.waitForTimeout(100);
+  if (await conferir() !== antesConf) await falhar('marcar citação como conferida');
+  await cit().locator('[data-f="texto"]').fill('Texto mudado depois de conferir'); await p.waitForTimeout(100);
+  if (await cit().locator('[data-f="conferida"]').isChecked() || await conferir() !== antesConf + 1) await falhar('editar a citação não derrubou a marca');
+  await cit().locator('[data-f="fonte"]').fill('Ellen G. White, O Desejado de Todas as Nações'); await p.waitForTimeout(100);
+  if (!/Falta a página/.test(await cit().innerText())) await falhar('aviso de fonte sem página');
+  await cit().locator('[data-a="blDel"]').click();
   passou();
 
   // 4) buscar versículo; versão fora do catálogo mostra erro
@@ -229,10 +261,10 @@ const foto = async (pg, nome) => { if (process.env.SHOTS) await pg.screenshot({ 
   await p.click('[data-a="teleRolar"]');
   for (let k = 0; k < 7; k++) await p.click('[data-a="fonte"][data-v="-1"]');
   const titulo = await p.locator('.pgt').innerText();
-  await p.clock.fastForward('02:00');
+  await avancar(p, 120000);
   await p.click('[data-a="pgIr"][data-v="1"]'); await p.waitForTimeout(300);
   if (!/de 7 min/.test(await p.locator('#tparte').innerText())) await falhar('tempo previsto da parte 2', await p.locator('#tparte').innerText());
-  await p.clock.fastForward('01:30');
+  await avancar(p, 90000);
   await p.screenshot({ path: path.join(__dirname, '.pregar.png') });
   passou();
 
@@ -244,7 +276,7 @@ const foto = async (pg, nome) => { if (process.env.SHOTS) await pg.screenshot({ 
   await p.click('.md [data-a="fecharModal"]'); await p.waitForTimeout(ESPERA);
   const sermao = Object.values(srv.DB).find(m => m.tema === 'Editado sem internet');
   const reg = sermao && sermao.pregacoes && sermao.pregacoes[0];
-  if (!reg || reg.total < 200 || reg.partes[0].seg < 110 || reg.partes[1].seg < 85) await falhar('registro da pregação no servidor', reg);
+  if (!reg || reg.total < 200 || reg.partes[0].seg < 110 || reg.partes[1].seg < 85) await falhar('registro da pregação no servidor', JSON.stringify(reg && { total: reg.total, p0: reg.partes[0].seg, p1: reg.partes[1].seg }));
   if (!sermao.opcoes || sermao.opcoes.teleprompter !== true) await falhar('preferência do teleprompter não foi salva', sermao.opcoes);
   if (!/pregado 1×/.test(await p.locator('#tlcap').innerText())) await falhar('legenda sem o registro da pregação');
   await foto(p, 'legenda');

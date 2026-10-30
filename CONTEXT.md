@@ -133,7 +133,7 @@ Bloco =
       // versão padrão: 'NBV'; copyright vem preenchido pela busca no YouVersion (atribuição exigida pela licença)
   | { tipo: 'lista',   itens: string[] }
   | { tipo: 'texto',   texto }
-  | { tipo: 'citacao', texto, fonte }
+  | { tipo: 'citacao', texto, fonte, conferida? }   // conferida: true = conferida na fonte (texto literal e página)
   | { tipo: 'imagem',  url, legenda }         // url do Drive (thumbnail) ou externa
   | { tipo: 'obs',     texto }                // nota do pregador; discreta no modo Pregar
 ```
@@ -285,6 +285,12 @@ Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodada
     - **blocos:** os botões subir/descer/remover só aparecem no bloco selecionado (tocar no bloco ou focar um campo dele: `selecionar()`, classe `.sel`), ou com `:focus-within`.
   - **Pregar:**
     - texto grande; no rodapé, a barra de partes (largura pelos minutos previstos), o marcador `#playhead` do tempo total, o cronômetro, "Nesta parte mm:ss de X min" (`#tparte`, laranja ao passar do previsto) e o botão com o título da próxima parte;
+    - **citações (Ellen White e outras), sem API:**
+      - **colar do EGW Writings:** `lerColagemEGW()` reconhece códigos como `{DTN 558.2}` no texto colado, tira-os do texto e preenche a fonte ("Ellen G. White, O Desejado de Todas as Nações, p. 558 (DTN 558.2)"). A tabela `LIVROS_EGW` traz as abreviações mais comuns em português; uma abreviação desconhecida fica como veio. A fonte só é preenchida se estiver vazia (ou só com o autor);
+      - a paleta "Inserir" tem **"Citação de Ellen White"** (`/e`, tipo virtual `egw` que cria um `citacao` com o autor na fonte);
+      - **"Conferir no EGW Writings"** abre `egwwritings.org/search` com as primeiras 12 palavras da citação;
+      - **"Conferida na fonte"** (`conferida: true`): a legenda mostra "N citações a conferir", e o modo Pregar marca "conferir" ao lado da fonte. Editar o texto ou a fonte desmarca sozinho. Fonte de Ellen White sem página mostra "Falta a página na fonte";
+      - não há API: a do EGW Writings (`a.egwwritings.org`) exige registro do app, e o aviso legal do White Estate só fala de uso justo de citações breves. A integração automática ficou para quando houver autorização;
     - **teleprompter (opcional, por sermão):**
       - liga e desliga pela pílula "Teleprompter" do editor (`opcoes.teleprompter`);
       - ligado, o texto rola sozinho (`teleQuadro()`, com `requestAnimationFrame`). A velocidade é a distância a rolar dividida pelos segundos previstos para a parte, vezes um fator de 0,5× a 2× (botões − e +);
@@ -346,7 +352,7 @@ npm run setup               # uma vez: Babel + Playwright 1.56.1 (versão fixa) 
 # editar web/index.src.html e/ou src/Code.gs
 npm run build               # gera docs/ (página sem template literals, config preenchida, nova versão do sw.js)
 npm test                    # build + teste de ponta a ponta no Chromium, com API e login simulados;
-                            # cobre: login, código de pareamento, inserir blocos (3 jeitos), busca de versículo, seleção, desfazer,
+                            # cobre: login, código de pareamento, inserir blocos (3 jeitos), citações de Ellen White, busca de versículo, seleção, desfazer,
                             # tempo por parte, salvamento automático, conflito, sessão vencida,
                             # busca na lista, importar/exportar .sermao.json, versões, lixeira, backup,
                             # relatório da pregação,
@@ -381,6 +387,6 @@ O passo a passo completo, com prints do que procurar, está no `README.md`. Resu
 
 ## Convenções de conteúdo (herdadas do projeto da igreja)
 
-- **Ellen G. White:** só citação **literal**, com livro e página, nunca paráfrase. Fontes em inglês levam o original ao lado da tradução.
+- **Ellen G. White:** só citação **literal**, com livro e página, nunca paráfrase. Fontes em inglês levam o original ao lado da tradução. No app, a marca "Conferida na fonte" só é ligada por você, depois de conferir no EGW Writings; o Claude (skill `exportar-sermao-app`) nunca a marca.
 - **Versão bíblica padrão: NBV** (Nova Bíblia Viva). Quando outra versão for usada, ela é indicada no campo `versao`.
 - **Frases-âncora** ficam em blocos de Observação ou Texto, marcadas como "FRASE-ÂNCORA".

@@ -149,6 +149,12 @@ svg{flex:none}
 .ref .buscar{display:inline-flex;align-items:center;gap:6px;height:32px;margin:-4px -6px -4px 0;padding:0 12px;border-radius:16px;background:var(--ac);color:var(--acx);font-size:14px;font-weight:700;white-space:nowrap}
 .ref .buscar:disabled{opacity:.5;cursor:default}
 .copy{font-size:12px;color:var(--mu);line-height:1.4}
+.citx{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;font-size:14px}
+.citx .link{font-size:14px;min-height:32px}
+.chk{display:inline-flex;align-items:center;gap:8px;color:var(--mu);cursor:pointer;min-height:32px}
+.chk input{width:18px;height:18px;accent-color:var(--ac)}
+.citx .warn{color:var(--warn)}
+.r-conf{margin-left:.6em;padding:.05em .45em;border-radius:6px;border:1px solid var(--warn);color:var(--warn);font-size:.85em}
 .fonte{background:none;border:0;outline:0;padding:0;font-size:15px;color:var(--mu);width:100%}
 .li{display:flex;align-items:center;gap:10px}
 .li::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--ac);flex:none}
@@ -426,6 +432,17 @@ body:has(.pg) #toast{bottom:auto;top:76px}
         fonte: ''
       })
     },
+    egw: {
+      nome: 'Citação de Ellen White',
+      atalho: 'e',
+      icon: 'quote',
+      novo: () => ({
+        tipo: 'citacao',
+        texto: '',
+        fonte: 'Ellen G. White, '
+      })
+    },
+    // só na paleta
     imagem: {
       nome: 'Imagem',
       atalho: 'i',
@@ -918,6 +935,58 @@ body:has(.pg) #toast{bottom:auto;top:76px}
     if (estaPendente()) return 'Salvo no aparelho · envia quando a internet voltar';
     return S.msg && S.msg.id ? 'Salvo às ' + fmtHora(S.msg.atualizado) : '';
   }
+
+  /* ======================= citações (Ellen White e outras) ======================= */
+  /* abreviações do EGW Writings em português mais usadas; outras ficam com o código como veio */
+  const LIVROS_EGW = {
+    DTN: 'O Desejado de Todas as Nações',
+    CC: 'Caminho a Cristo',
+    GC: 'O Grande Conflito',
+    PP: 'Patriarcas e Profetas',
+    PR: 'Profetas e Reis',
+    AA: 'Atos dos Apóstolos',
+    PJ: 'Parábolas de Jesus',
+    CBV: 'A Ciência do Bom Viver',
+    Ed: 'Educação',
+    LA: 'O Lar Adventista',
+    Ev: 'Evangelismo',
+    ME: 'Mensagens Escolhidas',
+    T: 'Testemunhos para a Igreja',
+    OE: 'Obreiros Evangélicos',
+    MDC: 'O Maior Discurso de Cristo',
+    CSES: 'Conselhos sobre a Escola Sabatina'
+  };
+  const ehEGW = b => /white|egw/i.test(b.fonte || '');
+  const aConferir = b => b.tipo === 'citacao' && !!String(b.texto || '').trim() && !b.conferida;
+  const nConferir = m => m.topicos.reduce((n, t) => n + t.blocos.filter(aConferir).length, 0);
+  const semPagina = b => ehEGW(b) && /\S/.test(String(b.fonte).replace(/ellen g\.? white,?/i, '')) && !/\bp\.?\s*\d|\b[A-Za-z]{1,6}\s+\d+\.\d+/.test(b.fonte);
+  function vCitacaoExtras(b) {
+    return "<div class=\"citx\">\n    " + (ehEGW(b) || !b.fonte ? "<button class=\"link\" data-a=\"egwConferir\">" + ic('search', 14) + " Conferir no EGW Writings</button>" : '') + "\n    <label class=\"chk\"><input type=\"checkbox\" data-f=\"conferida\" " + (b.conferida ? 'checked' : '') + "> Conferida na fonte (texto literal e p\xE1gina)</label>\n    " + (semPagina(b) ? '<span class="warn">Falta a página na fonte.</span>' : '') + "\n  </div>";
+  }
+
+  /* texto copiado do EGW Writings termina (ou é intercalado) com códigos como {DTN 558.2} */
+  function lerColagemEGW(txt) {
+    const refs = [],
+      re = /\{\s*([A-Za-zÀ-ú0-9]{1,8})\s+(\d+)\.(\d+)\s*\}/g;
+    let r;
+    while (r = re.exec(txt)) refs.push({
+      abrev: r[1],
+      pag: +r[2],
+      par: +r[3]
+    });
+    if (!refs.length) return null;
+    const texto = txt.replace(re, ' ').replace(/[ \t]+\n/g, '\n').replace(/[ \t]{2,}/g, ' ').trim().replace(/^[“"]|[”"]$/g, '').trim();
+    const a = refs[0],
+      z = refs[refs.length - 1];
+    const livro = LIVROS_EGW[a.abrev];
+    const pags = a.pag === z.pag || a.abrev !== z.abrev ? 'p. ' + a.pag : 'p. ' + a.pag + '-' + z.pag;
+    const codigo = a.abrev + ' ' + a.pag + '.' + a.par + (refs.length > 1 ? '–' + (z.abrev !== a.abrev ? z.abrev + ' ' : '') + z.pag + '.' + z.par : '');
+    return {
+      texto,
+      fonte: 'Ellen G. White, ' + (livro ? livro + ', ' + pags + ' (' + codigo + ')' : codigo),
+      codigo
+    };
+  }
   function vLinhaCap() {
     const m = S.msg,
       n = m.topicos.length,
@@ -928,7 +997,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       noRitmo = ppm ? m.topicos.reduce((x, t) => x + palavras(t), 0) / ppm : 0;
     const pr = m.pregacoes || [],
       ult = pr[pr.length - 1];
-    return "" + plural(n, 'parte', 'partes') + (" \xB7 <span class=\"" + (total > m.tempo + 0.5 ? 'warn' : '') + "\">previsto " + fmtMin(total) + " de " + m.tempo + " min</span>") + (noRitmo >= 1 ? " \xB7 <span class=\"" + (noRitmo > m.tempo + 2 ? 'warn' : '') + "\" title=\"Palavras do serm\xE3o divididas pelo seu ritmo nas \xFAltimas prega\xE7\xF5es\">no seu ritmo \u2248 " + fmtMin(noRitmo) + " min</span>" : '') + (" \xB7 <span class=\"" + (pct >= 80 ? 'warn' : '') + "\" title=\"Espa\xE7o usado na c\xE9lula da planilha\">" + pct + "% do espa\xE7o</span>") + (ult ? " \xB7 <button class=\"link inl\" data-a=\"verPregacao\" data-i=\"" + (pr.length - 1) + "\">pregado " + pr.length + "\xD7 \xB7 \xFAltimo " + fmtData(ult.data) + ", " + mmss(ult.total) + "</button>" : '');
+    return "" + plural(n, 'parte', 'partes') + (" \xB7 <span class=\"" + (total > m.tempo + 0.5 ? 'warn' : '') + "\">previsto " + fmtMin(total) + " de " + m.tempo + " min</span>") + (noRitmo >= 1 ? " \xB7 <span class=\"" + (noRitmo > m.tempo + 2 ? 'warn' : '') + "\" title=\"Palavras do serm\xE3o divididas pelo seu ritmo nas \xFAltimas prega\xE7\xF5es\">no seu ritmo \u2248 " + fmtMin(noRitmo) + " min</span>" : '') + (" \xB7 <span class=\"" + (pct >= 80 ? 'warn' : '') + "\" title=\"Espa\xE7o usado na c\xE9lula da planilha\">" + pct + "% do espa\xE7o</span>") + (nConferir(m) ? " \xB7 <span class=\"warn\" title=\"Cita\xE7\xF5es sem a marca &quot;Conferida na fonte&quot;\">" + plural(nConferir(m), 'citação a conferir', 'citações a conferir') + "</span>" : '') + (ult ? " \xB7 <button class=\"link inl\" data-a=\"verPregacao\" data-i=\"" + (pr.length - 1) + "\">pregado " + pr.length + "\xD7 \xB7 \xFAltimo " + fmtData(ult.data) + ", " + mmss(ult.total) + "</button>" : '');
   }
   function vEditor() {
     const m = S.msg,
@@ -967,7 +1036,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
         corpo = (b.itens || []).map((it, li) => "<div class=\"li\"><input class=\"ta\" data-f=\"item\" data-li=\"" + li + "\" value=\"" + esc(it) + "\" placeholder=\"Item\"><button class=\"ic sm\" data-a=\"delItem\" data-li=\"" + li + "\" aria-label=\"Apagar item\">" + ic('x', 14) + "</button></div>").join('') + ("<button class=\"link\" data-a=\"addItem\">" + ic('plus', 15) + " Adicionar item</button>");
         break;
       case 'citacao':
-        corpo = "<textarea class=\"ta\" data-f=\"texto\" rows=\"1\" placeholder=\"Texto da cita\xE7\xE3o\">" + esc(b.texto) + "</textarea>\n        <input class=\"fonte\" data-f=\"fonte\" placeholder=\"Autor e fonte (ex.: Ellen G. White, Conselhos sobre a Escola Sabatina, p. 10)\" aria-label=\"Fonte\" value=\"" + esc(b.fonte) + "\">";
+        corpo = "<textarea class=\"ta\" data-f=\"texto\" rows=\"1\" placeholder=\"Texto da cita\xE7\xE3o (colado do EGW Writings, a refer\xEAncia {DTN 558.2} vira a fonte)\">" + esc(b.texto) + "</textarea>\n        <input class=\"fonte\" data-f=\"fonte\" placeholder=\"Autor e fonte (ex.: Ellen G. White, Conselhos sobre a Escola Sabatina, p. 10)\" aria-label=\"Fonte\" value=\"" + esc(b.fonte) + "\">\n        " + vCitacaoExtras(b);
         break;
       case 'imagem':
         corpo = (b.url ? "<img class=\"prev\" src=\"" + esc(b.url) + "\" alt=\"\">" : '') + "\n        <label class=\"up\">" + ic('upload', 16) + " Enviar imagem do aparelho<input type=\"file\" accept=\"image/*\" data-f=\"arquivo\"></label>\n        <input class=\"inp2\" data-f=\"url\" placeholder=\"\u2026ou cole o link de uma imagem\" aria-label=\"Link da imagem\" value=\"" + esc(b.url) + "\">\n        <input class=\"inp2\" data-f=\"legenda\" placeholder=\"Legenda (opcional)\" aria-label=\"Legenda\" value=\"" + esc(b.legenda) + "\">";
@@ -1002,7 +1071,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       case 'lista':
         return "<ul class=\"r-list\">" + (b.itens || []).filter(x => x.trim()).map(x => "<li>" + esc(x) + "</li>").join('') + "</ul>";
       case 'citacao':
-        return "<blockquote class=\"r-cit\"><p>\u201C" + esc(b.texto) + "\u201D</p>" + (b.fonte ? "<cite>" + esc(b.fonte) + "</cite>" : '') + "</blockquote>";
+        return "<blockquote class=\"r-cit\"><p>\u201C" + esc(b.texto) + "\u201D</p>" + (b.fonte || aConferir(b) ? "<cite>" + esc(b.fonte) + (aConferir(b) ? '<span class="r-conf">conferir</span>' : '') + "</cite>" : '') + "</blockquote>";
       case 'imagem':
         return b.url ? "<figure class=\"r-img\"><img src=\"" + esc(b.url) + "\" alt=\"\">" + (b.legenda ? "<figcaption>" + esc(b.legenda) + "</figcaption>" : '') + "</figure>" : '';
       case 'obs':
@@ -1225,7 +1294,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
 
   /* aceita só os campos conhecidos de cada tipo; tipo desconhecido com texto vira Parágrafo, sem texto é ignorado */
   function normalizarBloco(b) {
-    if (!b || !TIPOS[b.tipo]) return b && typeof b.texto === 'string' ? {
+    if (!b || !TIPOS[b.tipo] || b.tipo === 'egw') return b && typeof b.texto === 'string' ? {
       tipo: 'texto',
       texto: b.texto
     } : null;
@@ -1250,11 +1319,15 @@ body:has(.pg) #toast{bottom:auto;top:76px}
           };
         }
       case 'citacao':
-        return {
-          tipo: 'citacao',
-          texto: str(b.texto),
-          fonte: str(b.fonte)
-        };
+        {
+          const x = {
+            tipo: 'citacao',
+            texto: str(b.texto),
+            fonte: str(b.fonte)
+          };
+          if (b.conferida === true) x.conferida = true;
+          return x;
+        }
       case 'imagem':
         return {
           tipo: 'imagem',
@@ -2082,6 +2155,13 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       case 'buscarVers':
         buscarVers(B, el);
         break;
+      case 'egwConferir':
+        {
+          const termos = String(B.texto || '').replace(/\s+/g, ' ').trim().split(' ').slice(0, 12).join(' ') || String(B.fonte || '').replace(/ellen g\.? white,?/i, '').trim();
+          if (!termos) return toast('Escreva ou cole o começo da citação para pesquisar.', true);
+          window.open('https://egwwritings.org/search?query=' + encodeURIComponent(termos), '_blank');
+          break;
+        }
       case 'blUp':
         swap(T.blocos, bi, bi - 1);
         S.sel = ti + ':' + (bi - 1);
@@ -2187,10 +2267,43 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       const bl = el.closest('.bl');
       if (!bl) return;
       const b = m.topicos[+bl.dataset.t].blocos[+bl.dataset.b];
+      if (f === 'conferida') {
+        if (el.checked) b.conferida = true;else delete b.conferida;
+        marcar();
+        return;
+      }
       if (f === 'item') b.itens[+el.dataset.li] = el.value;else b[f] = el.value;
+      if (b.tipo === 'citacao' && (f === 'texto' || f === 'fonte')) {
+        if (b.conferida) {
+          delete b.conferida;
+          const c = bl.querySelector('[data-f="conferida"]');
+          if (c) c.checked = false;
+        }
+        if (f === 'fonte') {
+          const x = bl.querySelector('.citx');
+          if (x) x.outerHTML = vCitacaoExtras(b);
+        }
+      }
     }
     if (el.tagName === 'TEXTAREA') autosize(el);
     marcar();
+  });
+  app.addEventListener('paste', e => {
+    const el = e.target,
+      bl = el.closest && el.closest('.bl.t-citacao');
+    if (!bl || el.dataset.f !== 'texto' || !e.clipboardData) return;
+    const lido = lerColagemEGW(e.clipboardData.getData('text/plain') || '');
+    if (!lido) return;
+    const b = S.msg.topicos[+bl.dataset.t].blocos[+bl.dataset.b];
+    e.preventDefault();
+    const ini = el.selectionStart,
+      fim = el.selectionEnd;
+    b.texto = (b.texto || '').slice(0, ini) + lido.texto + (b.texto || '').slice(fim);
+    if (!String(b.fonte || '').replace(/ellen g\.? white,?\s*/i, '').trim()) b.fonte = lido.fonte;
+    delete b.conferida;
+    marcar();
+    render();
+    toast('Referência reconhecida: ' + lido.codigo + '. Confira o texto e marque "Conferida na fonte".', false, null, 6000);
   });
   app.addEventListener('keydown', e => {
     const el = e.target,
