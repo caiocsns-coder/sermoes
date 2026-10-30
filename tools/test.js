@@ -1,7 +1,7 @@
 // Teste de fumaça: abre docs/index.html como se estivesse no GitHub Pages (https://app.test/),
 // com a API simulada (tools/mock-server.js + src/Seed.gs) e o login do Google simulado.
 // Cobre: login, inserir blocos, busca de versículo, seleção, desfazer, tempo por parte,
-// salvamento automático, conflito, sessão vencida, busca na lista, modo sem internet e Pregar.
+// salvamento automático, conflito, sessão vencida, busca na lista, importar/exportar, modo sem internet e Pregar.
 const fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
 const { criarServidor } = require('./mock-server');
@@ -125,11 +125,31 @@ const ESPERA = 3300; // um pouco mais que o salvamento automático (2,5 s)
   await p.fill('[data-f="filtro"]', '');
   passou();
 
-  // 9) sem internet: editar e criar sermão ficam no aparelho; ao voltar a conexão, tudo é enviado
+  // 9) importar e exportar .sermao.json
+  const arquivo = { formato: 'sermoes/1', sermao: { tema: 'Sermão importado no teste', pasta: 'Testes', tempo: 45, topicos: [
+    { titulo: 'Abertura', tempo: 5, blocos: [{ tipo: 'texto', texto: 'Olá' }, { tipo: 'biblico', ref: 'Salmo 23', versao: 'NBV', texto: '' }, { tipo: 'xyz' }] },
+    { titulo: 'Fim', blocos: [{ tipo: 'lista', itens: ['a', 'b'] }, { tipo: 'desconhecido', texto: 'vira parágrafo' }] } ] } };
+  await p.setInputFiles('[data-f="importar"]', { name: 'teste.sermao.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(arquivo)) });
+  await p.waitForTimeout(400);
+  const avisoImp = await p.locator('#toast').innerText();
+  if (await p.locator('[data-f="tema"]').inputValue() !== 'Sermão importado no teste' || !/Buscar/.test(avisoImp) || !/ignorado/.test(avisoImp) || !/40 min/.test(avisoImp)) await falhar('importar arquivo', avisoImp);
+  await p.waitForTimeout(ESPERA);
+  const imp = Object.values(srv.DB).find(m => m.tema === 'Sermão importado no teste');
+  if (!imp || imp.tempo !== 40 || imp.topicos[0].tempo !== 5 || imp.topicos[0].blocos.length !== 2 || imp.topicos[1].blocos[1].tipo !== 'texto') await falhar('sermão importado no servidor', imp);
+  const [baixado] = await Promise.all([p.waitForEvent('download'), p.click('[data-a="exportar"]')]);
+  const exp = JSON.parse(fs.readFileSync(await baixado.path(), 'utf8'));
+  if (exp.formato !== 'sermoes/1' || exp.sermao.tema !== 'Sermão importado no teste' || exp.sermao.topicos.length !== 2 || baixado.suggestedFilename() !== 'sermao-importado-no-teste.sermao.json') await falhar('exportar arquivo', baixado.suggestedFilename());
+  await p.click('[data-a="voltar"]'); await p.waitForTimeout(400);
+  await p.setInputFiles('[data-f="importar"]', { name: 'ruim.json', mimeType: 'application/json', buffer: Buffer.from('{"nada": 1}') });
+  await p.waitForTimeout(300);
+  if (!(await p.locator('#toast.err').count()) || !/partes/.test(await p.locator('#toast').innerText())) await falhar('arquivo inválido não foi recusado');
+  passou();
+
+  // 10) sem internet: editar e criar sermão ficam no aparelho; ao voltar a conexão, tudo é enviado
   srv.estado.apiForaDoAr = true;
   await p.reload(); await p.waitForTimeout(800);
   if (!(await p.locator('.aviso').count()) || !(await p.locator('#res .card').count())) await falhar('lista do aparelho sem internet');
-  await p.click('.card'); await p.waitForTimeout(400);
+  await p.locator('.card', { hasText: 'Tema alterado no teste' }).first().click(); await p.waitForTimeout(400);
   await p.fill('[data-f="tema"]', 'Editado sem internet');
   await p.waitForTimeout(ESPERA);
   if (!/Salvo no aparelho/.test(await p.locator('#status').innerText())) await falhar('status sem internet', await p.locator('#status').innerText());
@@ -144,7 +164,7 @@ const ESPERA = 3300; // um pouco mais que o salvamento automático (2,5 s)
   if (await p.evaluate(() => JSON.parse(localStorage.getItem('sermoes.pend') || '[]').length)) await falhar('pendências não foram limpas');
   passou();
 
-  // 10) Pregar, com tempo da parte
+  // 11) Pregar, com tempo da parte
   await p.locator('.card', { hasText: 'Editado sem internet' }).first().click(); await p.waitForTimeout(400);
   await p.click('[data-a="pregar"]'); await p.waitForTimeout(700);
   const titulo = await p.locator('.pgt').innerText();

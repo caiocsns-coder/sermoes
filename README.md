@@ -58,5 +58,6 @@ Troque `USUARIO` pelo seu usuário do GitHub e `sermoes` pelo nome do repositór
 ## Dia a dia
 - **Mudou a página** (`web/`): `npm test` e depois `git push`. A versão nova chega ao iPad na próxima vez que o app abrir com internet.
 - **Mudou o servidor** (`src/Code.gs`): cole no Apps Script e crie uma **Nova versão** da implantação.
-- **Importar um sermão escrito com o Claude:** cole o `.gs` gerado pela skill `exportar-sermao-app` no Apps Script e execute a função dele.
+- **Importar um sermão escrito com o Claude:** baixe o `.sermao.json` gerado pela skill `exportar-sermao-app` e toque em **Importar** na lista do app.
+- **Backup ou compartilhar um sermão:** no editor, toque no ícone de download. No iPad abre a folha de compartilhamento (Salvar em Arquivos, AirDrop…).
 - **Perdeu um aparelho:** execute `encerrarTodasAsSessoes` no editor do Apps Script. Todos os aparelhos vão pedir login de novo.

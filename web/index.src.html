@@ -66,6 +66,8 @@ svg{flex:none}
 .busca{display:flex;align-items:center;gap:8px;width:280px;height:48px;padding:0 16px;border-radius:24px;background:var(--s1);border:1px solid var(--bd);color:var(--mu)}
 .busca input{flex:1;min-width:0;background:none;border:0;outline:0;font-size:16px}
 .lhead .btn{height:48px;border-radius:24px;padding:0 20px;font-size:16px}
+.lhead .imp{cursor:pointer}
+.lhead .imp input{display:none}
 .wrap{max-width:1180px;margin:0 auto;padding:8px 48px 140px}
 .sec{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);margin:28px 0 14px}
 .card{position:relative;cursor:pointer;border:1px solid var(--bd);background:var(--s1)}
@@ -248,7 +250,10 @@ body:has(.pg) #toast{bottom:auto;top:76px}
   .busca{order:3;width:100%}
   .aviso{margin:4px 16px 0}
   .lhead .lg{display:none}
-  .lhead{gap:10px}
+  .lhead .btn{padding:0 14px}
+  .lhead .imp{width:46px;padding:0;justify-content:center}
+  .lhead{gap:8px}
+  .lhead .logo{font-size:32px}
   .wrap{padding:8px 16px 120px}
   .feat{padding:20px}
   .feat .ft{font-size:26px;padding-right:80px}
@@ -317,6 +322,7 @@ const ICON = {
   folder:'<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
   cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
   copy:'<rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
   logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
   upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
 };
@@ -539,7 +545,8 @@ function vLista() {
   <header class="lhead">
     <h1 class="logo">Sermões</h1>
     <label class="busca">${ic('search', 16)}<input data-f="filtro" placeholder="Procurar tema, pasta, parte ou versículo" aria-label="Procurar sermão" value="${esc(S.filtro)}"></label>
-    <button class="btn pri" data-a="nova">${ic('plus', 16)} Novo<span class="lg"> sermão</span></button>
+    <label class="btn imp" title="Importar sermão de um arquivo .json">${ic('upload', 16)}<span class="lg">Importar</span><input type="file" accept=".json,application/json" data-f="importar" aria-label="Importar sermão"></label>
+    <button class="btn pri" data-a="nova">${ic('plus', 16)}<span>Novo<span class="lg"> sermão</span></span></button>
     <button class="ic sm" data-a="sair" title="Sair da conta neste aparelho" aria-label="Sair da conta">${ic('logout', 18)}</button>
   </header>
   ${S.offline ? '<div class="aviso">Sem internet: mostrando os sermões salvos neste aparelho. As alterações são enviadas quando a conexão voltar.</div>' : ''}
@@ -613,6 +620,7 @@ function vEditor() {
   <header class="bar">
     <button class="ic fill" data-a="voltar" title="Voltar" aria-label="Voltar para os sermões">${ic('back', 20)}</button><div class="sp"></div>
     <span class="status ${S.dirty ? 'dirty' : estaPendente() ? 'pend' : ''}" id="status">${txtStatus()}</span>
+    <button class="ic fill" data-a="exportar" title="Exportar sermão (.json)" aria-label="Exportar sermão">${ic('download', 18)}</button>
     <button class="btn" data-a="salvar">Salvar</button>
     <button class="btn pri" data-a="pregar">${ic('play', 14)} Pregar</button>
   </header>
@@ -867,6 +875,99 @@ async function buscarVers(B, btn) {
   }
 }
 
+/* ======================= importar / exportar (.json) ======================= */
+/* Arquivo: { formato: 'sermoes/1', exportado: ISO, sermao: { tema, pasta, tempo, topicos } }
+ * Também aceita o objeto do sermão "solto" (sem o envelope). Ver CONTEXT.md, "Arquivo .sermao.json". */
+const FORMATO = 'sermoes/1';
+const str = v => typeof v === 'string' ? v : v == null ? '' : String(v);
+const slug = s => norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'sermao';
+
+function paraArquivo(m) {
+  return { formato: FORMATO, exportado: new Date().toISOString(), sermao: {
+    tema: m.tema || '', pasta: m.pasta || '', tempo: m.tempo || 30,
+    topicos: m.topicos.map(t => {
+      const p = { titulo: t.titulo || '' };
+      if (t.tempo > 0) p.tempo = +t.tempo;
+      p.blocos = JSON.parse(JSON.stringify(t.blocos || []));
+      return p;
+    }),
+  } };
+}
+
+/* iPad: abre a folha de compartilhamento (Salvar em Arquivos, AirDrop, e-mail…); computador: baixa o arquivo */
+async function exportar() {
+  const m = S.msg, nome = slug(m.tema) + '.sermao.json';
+  const arq = new File([JSON.stringify(paraArquivo(m), null, 2)], nome, { type: 'application/json' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [arq] })) { await navigator.share({ files: [arq], title: m.tema || 'Sermão' }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const url = URL.createObjectURL(arq), a = document.createElement('a');
+  a.href = url; a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast('Arquivo ' + nome + ' baixado');
+}
+
+/* aceita só os campos conhecidos de cada tipo; tipo desconhecido com texto vira Parágrafo, sem texto é ignorado */
+function normalizarBloco(b) {
+  if (!b || !TIPOS[b.tipo]) return b && typeof b.texto === 'string' ? { tipo: 'texto', texto: b.texto } : null;
+  switch (b.tipo) {
+    case 'biblico': { const x = { tipo: 'biblico', ref: str(b.ref), versao: str(b.versao) || 'NBV', texto: str(b.texto) }; if (b.copyright) x.copyright = str(b.copyright); return x; }
+    case 'lista': { const itens = Array.isArray(b.itens) ? b.itens.map(str) : []; return { tipo: 'lista', itens: itens.length ? itens : [''] }; }
+    case 'citacao': return { tipo: 'citacao', texto: str(b.texto), fonte: str(b.fonte) };
+    case 'imagem': return { tipo: 'imagem', url: str(b.url), legenda: str(b.legenda) };
+    default: return { tipo: b.tipo, texto: str(b.texto) };
+  }
+}
+
+/* lê e confere o arquivo; devolve { msg, avisos } ou lança um erro em português */
+function lerArquivoSermao(texto) {
+  let d;
+  try { d = JSON.parse(texto); } catch (e) { throw new Error('O arquivo não é um JSON válido.'); }
+  if (d && d.formato) {
+    const v = String(d.formato).match(/^sermoes\/(\d+)$/);
+    if (!v) throw new Error('Formato de arquivo desconhecido: ' + d.formato + '.');
+    if (+v[1] > 1) throw new Error('Este arquivo é de uma versão mais nova do app (' + d.formato + '). Atualize o app e tente de novo.');
+  }
+  const s = d && d.sermao ? d.sermao : d;
+  if (!s || !Array.isArray(s.topicos) || !s.topicos.length) throw new Error('O arquivo não tem as partes do sermão ("topicos").');
+  const avisos = [];
+  let tempo = Math.round(+s.tempo) || 30;
+  if (TEMPOS.indexOf(tempo) < 0) {
+    const perto = TEMPOS.reduce((a, b) => Math.abs(b - tempo) < Math.abs(a - tempo) ? b : a);
+    avisos.push('Tempo de ' + tempo + ' min ajustado para ' + perto + ' min.'); tempo = perto;
+  }
+  let ignorados = 0;
+  const topicos = s.topicos.map((t, i) => {
+    const p = { titulo: str(t && t.titulo) || 'Parte ' + (i + 1), blocos: [] };
+    if (t && +t.tempo > 0) p.tempo = Math.round(+t.tempo);
+    (t && Array.isArray(t.blocos) ? t.blocos : []).forEach(b => { const x = normalizarBloco(b); if (x) p.blocos.push(x); else ignorados++; });
+    return p;
+  });
+  if (ignorados) avisos.push(plural(ignorados, 'bloco de tipo desconhecido foi ignorado.', 'blocos de tipo desconhecido foram ignorados.'));
+  const msg = { id: '', _local: 'local-' + Date.now(), tema: str(s.tema).trim() || 'Sermão importado', pasta: str(s.pasta).trim(), tempo, eventos: [], topicos };
+  const tam = tamanho(msg);
+  if (tam > LIMITE) throw new Error('Sermão grande demais para importar (' + tam + ' de ' + LIMITE + ' caracteres). Divida em dois arquivos.');
+  return { msg, avisos };
+}
+
+/* abre o sermão importado no editor; o salvamento automático cuida do resto (também sem internet) */
+async function importar(arquivo) {
+  let r;
+  try { r = lerArquivoSermao(await arquivo.text()); } catch (e) { return falha(e); }
+  const m = r.msg;
+  if (S.lista.some(x => norm(x.tema) === norm(m.tema))) {
+    if (!confirm('Já existe um sermão com o tema “' + m.tema + '”. Importar mesmo assim, como cópia?')) return;
+    m.tema += ' (importado)';
+  }
+  m.topicos.forEach((t, i) => t._open = i === 0);
+  S.msg = m; S.dirty = false; S.ins = null; S.sel = ''; S.view = 'editor'; render(); window.scrollTo(0, 0);
+  marcar();
+  const semTexto = m.topicos.reduce((n, t) => n + t.blocos.filter(b => b.tipo === 'biblico' && !b.texto.trim()).length, 0);
+  toast(['Importado: ' + plural(m.topicos.length, 'parte', 'partes') + '.']
+    .concat(semTexto ? [plural(semTexto, 'versículo está', 'versículos estão') + ' sem texto: toque em Buscar.'] : [])
+    .concat(r.avisos).join(' '), false, null, 9000);
+}
+
 /* ======================= dados ======================= */
 async function carregarLista() {
   S.carregando = true; S.view = 'lista'; render();
@@ -1101,6 +1202,7 @@ document.addEventListener('click', async e => {
       if (S.dirty && !(await salvar(true)) && !confirm('Não foi possível salvar. Sair mesmo assim e perder as alterações?')) return;
       clearTimeout(autoT); S.dirty = false; carregarLista(); break;
     case 'salvar': salvar(); break;
+    case 'exportar': exportar(); break;
     case 'pregar':
       if (!m.topicos.length) return toast('Adicione ao menos uma parte.', true);
       if (S.dirty && !(await salvar(true)) && !confirm('Não foi possível salvar. Pregar mesmo assim?')) return;
@@ -1177,7 +1279,7 @@ app.addEventListener('focusin', e => { const bl = e.target.closest && e.target.c
 
 app.addEventListener('input', e => {
   const el = e.target, f = el.dataset.f;
-  if (!f || f === 'arquivo') return;
+  if (!f || f === 'arquivo' || f === 'importar') return;
   if (f === 'filtro') { S.filtro = el.value; document.getElementById('res').innerHTML = vResultados(); return; }
   if (f === 'ins') {
     const ti = +el.dataset.t;
@@ -1242,6 +1344,7 @@ app.addEventListener('keydown', e => {
 
 app.addEventListener('change', async e => {
   const el = e.target;
+  if (el.dataset.f === 'importar') { const f = el.files[0]; el.value = ''; if (f) importar(f); return; }
   if (el.dataset.f !== 'arquivo' || !el.files[0]) return;
   const bl = el.closest('.bl'), b = S.msg.topicos[+bl.dataset.t].blocos[+bl.dataset.b];
   try {

@@ -21,7 +21,7 @@ A ideia inicial veio de um app de mercado (o "IDE APP"). Em out/2026 a interface
 
 O uso principal é no **iPad**, instalado na Tela de Início, e no Chrome do desktop. O dono é um único usuário, e não existe multiusuário: só a conta Google dona do script entra.
 
-O primeiro conteúdo carregado é o sermão **"Servindo em Sua Casa até que Ele Venha"** (174 anos da Escola Sabatina, out/2026), via `src/Seed.gs`. Outros sermões podem ser importados do mesmo jeito: a skill `exportar-sermao-app` gera um `.gs` desse tipo.
+O primeiro conteúdo carregado é o sermão **"Servindo em Sua Casa até que Ele Venha"** (174 anos da Escola Sabatina, out/2026), via `src/Seed.gs`. Outros sermões entram pelo botão **Importar** da lista, com um arquivo `.sermao.json` (ver "Arquivo .sermao.json"), que é o que a skill `exportar-sermao-app` gera.
 
 ## Estrutura
 
@@ -155,6 +155,33 @@ A opção recomendada é guardar **um arquivo `.json` por sermão** numa pasta "
   - Google Docs como banco: o formato é frágil.
   - Banco externo (Firebase/Supabase): só faz sentido se um dia houver multiusuário.
 
+## Arquivo .sermao.json (importar e exportar)
+
+Formato de troca de sermões entre o app, backups e o Claude (skill `exportar-sermao-app`). Não passa pelo servidor: a página lê e grava o arquivo, e o salvamento normal (`salvarMensagem`) cuida do resto.
+
+```json
+{
+  "formato": "sermoes/1",
+  "exportado": "2026-10-30T14:00:00.000Z",
+  "sermao": {
+    "tema": "…", "pasta": "…", "tempo": 40,
+    "topicos": [ { "titulo": "…", "tempo": 5, "blocos": [ { "tipo": "texto", "texto": "…" } ] } ]
+  }
+}
+```
+
+- **`formato`:** `sermoes/<versão>`. A página aceita a versão 1 e recusa versões maiores com o aviso "atualize o app". Se o modelo de dados mudar de forma incompatível, suba para `sermoes/2` e mantenha a leitura da 1.
+- **`sermao`:** o modelo `Mensagem` sem `id`, `atualizado` e `eventos` (cultos são da agenda de cada um e não viajam no arquivo). O arquivo também é aceito sem o envelope (só o objeto do sermão).
+- **Exportar** (ícone de download no editor): no iPad abre a folha de compartilhamento (Salvar em Arquivos, AirDrop, e-mail); no computador baixa `<tema-em-slug>.sermao.json`. Os blocos vão inteiros, inclusive o `copyright` dos versículos.
+- **Importar** (botão "Importar" na lista, `lerArquivoSermao()` e `normalizarBloco()`):
+  - só os campos conhecidos de cada tipo entram;
+  - tipo desconhecido com `texto` vira Parágrafo, e sem texto é ignorado (com aviso);
+  - tempo fora de 20/30/40/50/60/90/120 vai para o mais próximo (com aviso);
+  - passa pelo mesmo limite de 49 mil caracteres;
+  - tema repetido pergunta se quer importar como cópia (" (importado)");
+  - o sermão abre no editor como novo (`_local`) e é salvo pelo salvamento automático, inclusive sem internet;
+  - o aviso final conta os versículos sem texto, para tocar em **Buscar**.
+
 ## API do servidor (`Code.gs`)
 
 Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodadas direto no editor do Apps Script.
@@ -225,6 +252,7 @@ Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodada
   - **Pregar:**
     - texto grande; no rodapé, a barra de partes (largura pelos minutos previstos), o marcador `#playhead` do tempo total, o cronômetro, "Nesta parte mm:ss de X min" (`#tparte`, laranja ao passar do previsto) e o botão com o título da próxima parte;
     - **tela acesa:** pede a Wake Lock API ao entrar e de novo ao voltar para o app (fora do iframe, o iPad com iOS 16.4 ou mais novo aceita). Se o navegador recusar, mostra uma vez a dica de desligar o Bloqueio Automático do iPad.
+  - **Importar e exportar:** botão "Importar" na lista e ícone de download no editor (ver "Arquivo .sermao.json").
   - **Entrada:** tela "Sermões" com o botão do Google; sem internet e com cópia no aparelho, oferece "Usar o que está salvo no aparelho". Na lista, o ícone de sair encerra a sessão do aparelho.
 - **Inserir blocos:**
   - "+" abre e fecha a paleta;
@@ -276,7 +304,8 @@ npm run build               # gera docs/ (página sem template literals, config 
 npm test                    # build + teste de ponta a ponta no Chromium, com API e login simulados;
                             # cobre: login, inserir blocos (3 jeitos), busca de versículo, seleção, desfazer,
                             # tempo por parte, salvamento automático, conflito, sessão vencida,
-                            # busca na lista, modo sem internet (editar, criar e sincronizar) e Pregar
+                            # busca na lista, importar/exportar .sermao.json,
+                            # modo sem internet (editar, criar e sincronizar) e Pregar
 git add -A && git commit -m "…" && git push   # o GitHub Pages publica docs/ em cerca de 1 minuto
 ```
 
