@@ -112,6 +112,9 @@ Mensagem = {
     tempo?: number,      // minutos previstos para a parte, definidos pelo usuário (opcional, out/2026)
     _open?: boolean      // só na interface; o servidor descarta
   }],
+  opcoes?: {             // preferências do sermão (out/2026)
+    teleprompter?: true  // rolagem automática no modo Pregar
+  },
   pregacoes?: [{         // registro de cada vez que foi pregado (out/2026), no máximo 20
     data: string,        // ISO
     alvo: number,        // minutos
@@ -156,7 +159,7 @@ Os dados ficam numa **planilha do Google**, na aba `Mensagens`, com uma linha po
 - `salvarMensagem` e `excluirMensagem` usam `LockService.getScriptLock()`.
 - **Conflito entre aparelhos:** `salvarMensagem` compara o `atualizado` enviado com o da planilha. Se forem diferentes, alguém salvou antes em outro aparelho, e ele lança um erro que começa com `CONFLITO:`. A página pergunta se quer manter a versão local (reenvia com `_sobrescrever: true`) ou descartar as alterações locais e abrir a versão salva.
 - `obterMensagem` devolve uma mensagem clara, com linha e coluna, se o JSON da célula estiver corrompido.
-- A célula `dados` guarda `{ eventos, topicos, pregacoes }`.
+- A célula `dados` guarda `{ eventos, topicos, pregacoes, opcoes }`. O servidor só aceita as opções conhecidas (hoje, `teleprompter`).
 
 ### Histórico de versões, lixeira e backup (out/2026)
 
@@ -195,7 +198,7 @@ Formato de troca de sermões entre o app, backups e o Claude (skill `exportar-se
 ```
 
 - **`formato`:** `sermoes/<versão>`. A página aceita a versão 1 e recusa versões maiores com o aviso "atualize o app". Se o modelo de dados mudar de forma incompatível, suba para `sermoes/2` e mantenha a leitura da 1.
-- **`sermao`:** o modelo `Mensagem` sem `id`, `atualizado` e `eventos` (cultos são da agenda de cada um e não viajam no arquivo). O arquivo também é aceito sem o envelope (só o objeto do sermão).
+- **`sermao`:** o modelo `Mensagem` sem `id`, `atualizado`, `eventos` e `pregacoes`, com `opcoes` (opcional) (cultos são da agenda de cada um e não viajam no arquivo). O arquivo também é aceito sem o envelope (só o objeto do sermão).
 - **Exportar** (ícone de download no editor): no iPad abre a folha de compartilhamento (Salvar em Arquivos, AirDrop, e-mail); no computador baixa `<tema-em-slug>.sermao.json`. Os blocos vão inteiros, inclusive o `copyright` dos versículos.
 - **Importar** (botão "Importar" na lista, `lerArquivoSermao()` e `normalizarBloco()`):
   - só os campos conhecidos de cada tipo entram;
@@ -282,6 +285,13 @@ Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodada
     - **blocos:** os botões subir/descer/remover só aparecem no bloco selecionado (tocar no bloco ou focar um campo dele: `selecionar()`, classe `.sel`), ou com `:focus-within`.
   - **Pregar:**
     - texto grande; no rodapé, a barra de partes (largura pelos minutos previstos), o marcador `#playhead` do tempo total, o cronômetro, "Nesta parte mm:ss de X min" (`#tparte`, laranja ao passar do previsto) e o botão com o título da próxima parte;
+    - **teleprompter (opcional, por sermão):**
+      - liga e desliga pela pílula "Teleprompter" do editor (`opcoes.teleprompter`);
+      - ligado, o texto rola sozinho (`teleQuadro()`, com `requestAnimationFrame`). A velocidade é a distância a rolar dividida pelos segundos previstos para a parte, vezes um fator de 0,5× a 2× (botões − e +);
+      - a rolagem para com o cronômetro pausado, com o botão de pausa e por 4 s depois de toque ou rolagem manual (`telePausarToque()`);
+      - começa 3 s depois de entrar no modo Pregar e 2 s depois de trocar de parte, voltando ao topo;
+      - as bordas do texto ganham um esmaecimento (`.pgc.tele`);
+      - no celular, o tema some da barra para caber os controles;
     - **relatório da pregação:** ao sair do Pregar (depois de 1 minuto ou mais), `registrarPregacao()` guarda no sermão o tempo real de cada parte (`S.pr.tp`), o previsto e o número de palavras, e abre o resumo (previsto × real; laranja quando passou mais de 1 min, azul quando sobrou; "—" para parte não pregada), com "Descartar este registro";
     - **ritmo pessoal:** `aprenderRitmo()` acumula palavras escritas por minuto falado (partes com 30 s ou mais e 20 palavras ou mais), com peso maior para as pregações recentes, em `localStorage` (`sermoes.ritmo`, por aparelho). Mede o quanto você expande o texto escrito, não a velocidade da fala;
     - **tela acesa:** pede a Wake Lock API ao entrar e de novo ao voltar para o app (fora do iframe, o iPad com iOS 16.4 ou mais novo aceita). Se o navegador recusar, mostra uma vez a dica de desligar o Bloqueio Automático do iPad.

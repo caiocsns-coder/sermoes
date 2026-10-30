@@ -18,7 +18,7 @@ function criarServidor(seedCode) {
     const at = new Date(Date.now() + Object.keys(DB).length).toISOString();
     DB[id] = { id, tema: msg.tema, pasta: msg.pasta, tempo: msg.tempo, eventos: msg.eventos || [],
       topicos: (msg.topicos || []).map(t => { const p = { titulo: t.titulo, blocos: t.blocos }; if (Number(t.tempo) > 0) p.tempo = Number(t.tempo); return p; }),
-      pregacoes: (msg.pregacoes || []).slice(-20), atualizado: at };
+      pregacoes: (msg.pregacoes || []).slice(-20), opcoes: msg.opcoes && msg.opcoes.teleprompter ? { teleprompter: true } : {}, atualizado: at };
     return { id, atualizado: at };
   }
   const API = {

@@ -240,7 +240,7 @@ function obterMensagem(id) {
   catch (e) { throw new Error('Os dados deste sermão estão corrompidos na planilha (linha ' + linha + ', coluna "dados"). Abra a planilha e confira o texto da célula.'); }
   return {
     id: String(r[0]), tema: String(r[1]), pasta: String(r[2]), tempo: Number(r[3]) || 30,
-    eventos: dados.eventos || [], topicos: dados.topicos || [], pregacoes: dados.pregacoes || [], atualizado: String(r[5]),
+    eventos: dados.eventos || [], topicos: dados.topicos || [], pregacoes: dados.pregacoes || [], opcoes: dados.opcoes || {}, atualizado: String(r[5]),
   };
 }
 
@@ -275,7 +275,8 @@ function salvarMensagem(msg) {
       if (Number(t.tempo) > 0) p.tempo = Number(t.tempo);
       return p;
     });
-    const dados = JSON.stringify({ eventos: msg.eventos || [], topicos, pregacoes: (msg.pregacoes || []).slice(-MAX_PREGACOES) });
+    const opcoes = msg.opcoes && msg.opcoes.teleprompter ? { teleprompter: true } : {}; // preferências do sermão
+    const dados = JSON.stringify({ eventos: msg.eventos || [], topicos, pregacoes: (msg.pregacoes || []).slice(-MAX_PREGACOES), opcoes });
     if (dados.length > LIMITE_DADOS) {
       throw new Error('Sermão grande demais para uma célula da planilha (' + dados.length + ' de ' + LIMITE_DADOS + ' caracteres). Divida em dois sermões ou remova imagens e textos longos.');
     }
@@ -433,7 +434,7 @@ function backupSemanal() {
     let d = {};
     try { d = JSON.parse(r[4] || '{}'); } catch (e) {}
     const arq = { formato: 'sermoes/1', exportado: new Date().toISOString(),
-      sermao: { tema: String(r[1]), pasta: String(r[2]), tempo: Number(r[3]) || 30, topicos: d.topicos || [] } };
+      sermao: { tema: String(r[1]), pasta: String(r[2]), tempo: Number(r[3]) || 30, opcoes: d.opcoes || {}, topicos: d.topicos || [] } };
     pasta.createFile(slug_(r[1]) + '-' + String(r[0]).slice(0, 6) + '.sermao.json', JSON.stringify(arq, null, 2), 'application/json');
     n++;
   });

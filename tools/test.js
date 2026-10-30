@@ -213,7 +213,21 @@ const foto = async (pg, nome) => { if (process.env.SHOTS) await pg.screenshot({ 
 
   // 12) Pregar, com tempo da parte
   await p.locator('.card', { hasText: 'Editado sem internet' }).first().click(); await p.waitForTimeout(400);
+  // teleprompter: ligado por sermão; rola sozinho e pausa quando pedido
+  await p.click('[data-a="teleprompter"]');
+  if (!/ligado/.test(await p.locator('[data-a="teleprompter"]').innerText())) await falhar('ligar teleprompter');
   await p.click('[data-a="pregar"]'); await p.waitForTimeout(700);
+  for (let k = 0; k < 7; k++) await p.click('[data-a="fonte"][data-v="1"]');
+  await p.clock.runFor(12000);
+  const rolou = await p.locator('#pgc').evaluate(c => c.scrollTop);
+  if (!(rolou > 0)) await falhar('teleprompter não rolou o texto', rolou);
+  await p.click('[data-a="teleRolar"]');
+  const parado = await p.locator('#pgc').evaluate(c => c.scrollTop);
+  await p.clock.runFor(5000);
+  if (await p.locator('#pgc').evaluate(c => c.scrollTop) !== parado) await falhar('pausa da rolagem');
+  await foto(p, 'teleprompter');
+  await p.click('[data-a="teleRolar"]');
+  for (let k = 0; k < 7; k++) await p.click('[data-a="fonte"][data-v="-1"]');
   const titulo = await p.locator('.pgt').innerText();
   await p.clock.fastForward('02:00');
   await p.click('[data-a="pgIr"][data-v="1"]'); await p.waitForTimeout(300);
@@ -231,6 +245,7 @@ const foto = async (pg, nome) => { if (process.env.SHOTS) await pg.screenshot({ 
   const sermao = Object.values(srv.DB).find(m => m.tema === 'Editado sem internet');
   const reg = sermao && sermao.pregacoes && sermao.pregacoes[0];
   if (!reg || reg.total < 200 || reg.partes[0].seg < 110 || reg.partes[1].seg < 85) await falhar('registro da pregação no servidor', reg);
+  if (!sermao.opcoes || sermao.opcoes.teleprompter !== true) await falhar('preferência do teleprompter não foi salva', sermao.opcoes);
   if (!/pregado 1×/.test(await p.locator('#tlcap').innerText())) await falhar('legenda sem o registro da pregação');
   await foto(p, 'legenda');
   passou();
