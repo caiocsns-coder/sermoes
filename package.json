@@ -1,0 +1,14 @@
+{
+  "name": "sermoes-apps-script",
+  "private": true,
+  "scripts": {
+    "build": "node tools/build.js",
+    "test": "node tools/build.js && node tools/test.js",
+    "setup": "npm install && npx playwright install chromium"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@babel/plugin-transform-template-literals": "^7.24.0",
+    "playwright": "1.56.1"
+  }
+}

@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sermões</title>
+<meta name="theme-color" content="#131218">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sermões">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- preenchidos pelo build a partir de config.json (não são segredos) -->
+<meta name="sermoes:api" content="{{API_URL}}">
+<meta name="sermoes:client" content="{{GOOGLE_CLIENT_ID}}">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* Identidade "Linha do tempo": grafite-violeta, acento azul-céu */
+:root{
+  --bg:#131218;--bg2:#0f0e13;--s1:#1c1b23;--s2:#25232e;--s3:#3b3848;--bd:#2f2c3a;
+  --tx:#efecf5;--mu:#a19bb0;--ac:#82b8ff;--ac2:#5d8fd6;--acd:#17223a;--acx:#0b1830;--feito:#3b4f73;
+  --warn:#ffb86b;--dan:#ff6b5b;
+  --fd:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --fb:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--fb);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0}
+input,textarea,select{font:inherit;color:var(--tx)}
+svg{flex:none}
+.sp{flex:1}
+.muted{color:var(--mu)}
+
+/* botões */
+.btn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:22px;border:1px solid var(--bd);font-weight:700;font-size:15px;white-space:nowrap}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:var(--acx)}
+.btn:disabled{opacity:.35;cursor:default}
+.ic{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:22px;color:var(--tx)}
+.ic.fill{background:var(--s1)}
+.ic.sm{width:36px;height:36px;border-radius:18px;color:var(--mu)}
+.ic:disabled{opacity:.25;cursor:default}
+.link{display:inline-flex;align-items:center;gap:6px;min-height:40px;color:var(--ac);font-size:15px}
+.link.danger{color:var(--dan)}
+.pill{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border:1px solid var(--bd);border-radius:20px;background:var(--s1);font-size:15px;color:var(--tx);max-width:100%}
+.pill svg{color:var(--mu)}
+.pill input,.pill select{background:none;border:0;outline:0;font-size:15px;min-width:0;padding:0}
+.pill select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:2px}
+.pill select option{background:var(--s2);color:var(--tx)}
+.pill.add{border-style:dashed;border-color:var(--s3);background:none;color:var(--ac)}
+.pill.add svg{color:var(--ac)}
+.pill.ev{padding-right:4px}
+.status{font-size:14px;color:var(--mu);margin-right:4px}
+.status.dirty{color:var(--ac)}
+.status.pend{color:var(--warn)}
+
+/* barra superior */
+.bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:calc(14px + env(safe-area-inset-top)) 32px 14px;background:rgba(19,18,24,.92);backdrop-filter:blur(10px)}
+
+/* lista de sermões */
+.lhead{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px;padding:calc(36px + env(safe-area-inset-top)) 48px 12px}
+.logo{flex:1;margin:0;font-family:var(--fd);font-size:52px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.busca{display:flex;align-items:center;gap:8px;width:280px;height:48px;padding:0 16px;border-radius:24px;background:var(--s1);border:1px solid var(--bd);color:var(--mu)}
+.busca input{flex:1;min-width:0;background:none;border:0;outline:0;font-size:16px}
+.lhead .btn{height:48px;border-radius:24px;padding:0 20px;font-size:16px}
+.wrap{max-width:1180px;margin:0 auto;padding:8px 48px 140px}
+.sec{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);margin:28px 0 14px}
+.card{position:relative;cursor:pointer;border:1px solid var(--bd);background:var(--s1)}
+.card:hover{border-color:var(--s3)}
+.card .acts{position:absolute;top:12px;right:12px;display:flex;gap:2px}
+.feat{display:flex;flex-direction:column;gap:18px;padding:28px;border-radius:20px}
+.feat .ft{font-family:var(--fd);font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.1;padding-right:90px}
+.tag{display:inline-flex;align-items:center;padding:4px 10px;border-radius:12px;background:var(--acd);color:var(--ac);font-weight:700;font-size:15px}
+.fmeta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font-size:15px;color:var(--mu)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:16px;color:var(--mu)}
+.meta b{color:var(--tx)}
+.mini{display:flex;gap:4px;height:12px}
+.mini span{flex:1;border-radius:6px;background:var(--ac)}
+.mini span:nth-child(even){background:var(--ac2)}
+.rows{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;flex-direction:column;gap:4px;padding:16px 100px 16px 20px;border-radius:16px}
+.row .ct{font-size:19px;font-weight:700;line-height:1.3}
+.row .cm{font-size:15px;color:var(--mu)}
+.aviso{max-width:1084px;margin:4px auto 0;padding:10px 16px;border-radius:12px;background:#2a2016;color:var(--warn);font-size:15px}
+.pendtag{color:var(--warn)}
+.vazio{border:1px dashed var(--s3);border-radius:16px;padding:32px 20px;text-align:center;color:var(--mu);line-height:1.6}
+
+/* editor */
+.ed{max-width:1060px;margin:0 auto;padding:12px 48px 160px}
+.tema{display:block;width:100%;padding:0;background:none;border:0;outline:0;resize:none;overflow:hidden;font-family:var(--fd);font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
+.tema::placeholder{color:var(--s3)}
+.pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.tl{display:flex;gap:4px;height:34px;margin-top:28px}
+.tl button{min-width:28px;padding:0 10px;border-radius:8px;background:var(--s2);color:var(--mu);font-size:13px;font-weight:700;text-align:left;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tl button.on{background:var(--ac);color:var(--acx)}
+.tlcap{font-size:14px;color:var(--mu);margin-top:8px}
+.tlcap .warn,.pmeta .warn{color:var(--warn)}
+.pmeta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:-6px}
+.pill.sm{height:34px;padding:0 12px;font-size:14px;gap:6px}
+.pill input[type=number]{width:2.6em;text-align:right;-moz-appearance:textfield}
+.pill input[type=number]::-webkit-inner-spin-button,.pill input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.pill input::placeholder{color:var(--mu)}
+.partes{display:grid;grid-template-columns:48px minmax(0,1fr);column-gap:18px;margin-top:34px}
+.no{display:flex;flex-direction:column;align-items:center}
+.no b{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--s3);color:var(--mu);font-size:14px;display:flex;align-items:center;justify-content:center}
+.no.on b{background:var(--ac);border-color:var(--ac);color:var(--acx)}
+.no.add b{border-style:dashed;color:var(--ac)}
+.no i{flex:1;width:2px;margin:4px 0;background:var(--bd)}
+.pt{padding-bottom:26px;min-width:0}
+.tt{display:flex;align-items:center;gap:12px;min-height:34px;font-size:20px;text-align:left;max-width:100%}
+.tt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tt small{flex:none;font-size:14px;color:var(--mu)}
+.po{display:flex;flex-direction:column;gap:18px;padding-bottom:34px;min-width:0}
+.ph{display:flex;align-items:center;gap:2px;min-height:34px}
+.ph input{flex:1;min-width:0;height:36px;padding:0;background:none;border:0;outline:0;font-family:var(--fd);font-size:28px;font-weight:600;letter-spacing:-.02em}
+.ph input:focus{box-shadow:0 2px 0 var(--ac)}
+
+/* blocos */
+.bl{display:flex;flex-direction:column;gap:6px}
+.bh{display:flex;align-items:center;gap:2px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}
+.bh span{margin-right:auto}
+.bh button{visibility:hidden}
+.bl.sel .bh button,.bl:focus-within .bh button{visibility:visible}
+.bc{display:flex;flex-direction:column;gap:8px;border-radius:14px}
+.bl:focus-within .bc{box-shadow:0 0 0 1px var(--ac2)}
+.t-texto .bc{padding:8px 10px;margin:0 -10px}
+.t-biblico .bc{padding:14px 18px;background:var(--acd)}
+.t-citacao .bc{padding:14px 18px;border:1px solid var(--bd)}
+.t-obs .bc{padding:12px 16px;background:var(--s1)}
+.t-lista .bc,.t-imagem .bc{padding:12px 16px;border:1px dashed var(--bd)}
+.ta{display:block;width:100%;padding:0;background:none;border:0;outline:0;resize:none;overflow:hidden;font-size:18px;line-height:1.6;color:var(--tx)}
+.ta::placeholder{color:var(--s3)}
+.t-biblico .ta{font-style:italic}
+.t-obs .ta{font-size:16px;color:#c9c3d6}
+.ref{display:flex;gap:10px}
+.ref input{background:none;border:0;outline:0;padding:0;font-size:15px;font-weight:700;color:var(--ac)}
+.ref input:first-child{flex:1;min-width:0}
+.ref input.ver{width:80px;text-align:right;color:var(--mu)}
+.ref .buscar{display:inline-flex;align-items:center;gap:6px;height:32px;margin:-4px -6px -4px 0;padding:0 12px;border-radius:16px;background:var(--ac);color:var(--acx);font-size:14px;font-weight:700;white-space:nowrap}
+.ref .buscar:disabled{opacity:.5;cursor:default}
+.copy{font-size:12px;color:var(--mu);line-height:1.4}
+.fonte{background:none;border:0;outline:0;padding:0;font-size:15px;color:var(--mu);width:100%}
+.li{display:flex;align-items:center;gap:10px}
+.li::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--ac);flex:none}
+.prev{max-width:100%;max-height:260px;border-radius:10px;align-self:flex-start}
+.up{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:20px;background:var(--s2);font-size:15px;cursor:pointer;align-self:flex-start}
+.up input{display:none}
+.inp2{background:none;border:0;border-bottom:1px solid var(--bd);outline:0;padding:6px 0;font-size:16px;width:100%}
+
+/* inserir bloco */
+.ins{display:flex;align-items:center;gap:8px}
+.ins input{flex:1;min-width:0;height:48px;padding:0 16px;border-radius:12px;border:1px dashed var(--s3);background:none;outline:0;font-size:17px}
+.ins input:focus{border:1px solid var(--ac)}
+.ins input::placeholder{color:var(--mu)}
+.pal{width:340px;max-width:100%;display:flex;flex-direction:column;padding:6px;margin-top:8px;border-radius:14px;background:var(--s2);border:1px solid var(--s3)}
+.pal button{display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;border-radius:10px;font-size:16px;text-align:left}
+.pal button span{flex:1}
+.pal button small{color:var(--mu);font-size:13px}
+.pal button.on,.pal button:hover{background:var(--acd)}
+.pal p{margin:0;padding:10px 12px;color:var(--mu);font-size:15px}
+.pfoot{display:flex;justify-content:flex-end}
+
+/* modal */
+.ov{position:fixed;inset:0;z-index:20;background:rgba(10,9,14,.75);display:flex;align-items:center;justify-content:center;padding:20px}
+.md{width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;background:var(--s1);border:1px solid var(--bd);border-radius:20px;overflow:hidden}
+.mh{display:flex;align-items:center;justify-content:space-between;padding:10px 10px 10px 20px;border-bottom:1px solid var(--bd);font-family:var(--fd);font-size:20px}
+.ml{overflow-y:auto;padding:8px}
+.ml p{padding:12px}
+.mi{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;border-radius:12px;text-align:left}
+.mi:hover{background:var(--s2)}
+.mi small{color:var(--mu)}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;z-index:30;padding:12px 18px;border-radius:14px;background:var(--s2);border:1px solid var(--s3);color:var(--tx);font-size:15px;pointer-events:none;max-width:90vw}
+#toast.on{opacity:1;transform:translateX(-50%)}
+body:has(.pg) #toast{bottom:auto;top:76px}
+#toast.err{background:#5a1d18;border-color:#7a2a22}
+#toast.acao{pointer-events:auto;display:flex;align-items:center;gap:14px}
+#toast .undo{color:var(--ac);font-weight:700;min-height:32px;padding:0 4px}
+
+/* modo pregar */
+.pg{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg2)}
+.pgbar{display:flex;align-items:center;gap:10px;padding:calc(16px + env(safe-area-inset-top)) 28px 16px}
+.pgtema{flex:1;min-width:0;font-size:15px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fs{font-weight:700}
+.pgc{flex:1;overflow-y:auto;padding:12px max(28px,calc((100vw - 940px)/2)) 60px;font-size:calc(26px*var(--fs));line-height:1.5}
+.pgk{color:var(--ac);font-size:.55em;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.pgt{font-family:var(--fd);font-size:2em;font-weight:700;line-height:1.05;letter-spacing:-.03em;margin:.2em 0 .7em}
+.r-bib{margin:0 0 1.1em;padding:.6em .85em;border-radius:14px;background:var(--acd)}
+.r-ref{color:var(--ac);font-weight:700;font-size:.62em;letter-spacing:.03em}
+.r-ref span{color:var(--mu);font-weight:400;margin-left:.4em}
+.r-bib p{font-style:italic;margin:.25em 0 0;white-space:pre-wrap}
+.r-copy{display:block;margin-top:.6em;font-size:.42em;color:var(--mu);line-height:1.4}
+.r-txt{margin:0 0 1em;white-space:pre-wrap}
+.r-list{margin:0 0 1.1em;padding-left:1.2em}
+.r-list li{margin:.25em 0}
+.r-list li::marker{color:var(--ac)}
+.r-cit{margin:0 0 1.2em;padding:.7em .9em;border-radius:14px;border:1px solid var(--bd)}
+.r-cit p{margin:0;white-space:pre-wrap}
+.r-cit cite{display:block;margin-top:.5em;font-size:.6em;color:var(--mu);font-style:normal}
+.r-obs{margin:0 0 1.1em;padding:.55em .8em;border-radius:12px;background:var(--s1);font-size:.66em;color:#c9c3d6;white-space:pre-wrap}
+.r-obs b{color:var(--ac);margin-right:.4em}
+.r-img{margin:0 0 1.2em}
+.r-img img{max-width:100%;border-radius:12px;display:block}
+.r-img figcaption{font-size:.6em;color:var(--mu);margin-top:.4em}
+.pgf{display:flex;flex-direction:column;gap:14px;padding:18px 28px calc(20px + env(safe-area-inset-bottom));background:#16151c;border-top:1px solid var(--bd)}
+.seg{position:relative;display:flex;gap:4px;height:40px}
+.seg button{min-width:22px;padding:0 10px;border-radius:8px;background:var(--s2);color:var(--mu);font-size:13px;font-weight:700;text-align:left;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.seg button.feito{background:var(--feito);color:#c6dbff}
+.seg button.on{background:var(--ac);color:var(--acx)}
+#playhead{position:absolute;top:-8px;bottom:-8px;left:0;width:3px;margin-left:-1px;border-radius:2px;background:var(--tx);transition:left .6s;pointer-events:none}
+#playhead.over{background:var(--dan)}
+.pgnav{display:flex;align-items:center;gap:14px}
+.tparte{font-size:15px;color:var(--mu);white-space:nowrap}
+.tparte b{color:var(--tx);font-variant-numeric:tabular-nums}
+.tparte.warn,.tparte.warn b{color:var(--warn)}
+.timer{display:inline-flex;align-items:baseline;gap:10px;height:56px;padding:0 4px;border-radius:14px}
+.timer b{font-family:var(--fd);font-size:40px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:56px}
+.timer small{font-size:16px;color:var(--mu)}
+.timer.warn b{color:var(--warn)}
+.timer.over{background:var(--dan);padding:0 14px}
+.timer.over b,.timer.over small{color:#fff}
+.timer.paused{opacity:.45}
+.pv{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:28px;background:var(--s2)}
+.pv:disabled,.nx:disabled{opacity:.3;cursor:default}
+.nx{display:inline-flex;align-items:center;gap:10px;height:56px;max-width:46vw;padding:0 24px;border-radius:28px;background:var(--ac);color:var(--acx);font-size:16px;font-weight:700}
+.nx span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+
+/* entrada (login com Google) */
+#login{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;padding:24px;background:var(--bg)}
+#login.on{display:flex}
+#login.sobre{background:rgba(10,9,14,.85)}
+.lbox{width:min(420px,100%);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center}
+.lbox .logo{flex:none}
+.lbox p{margin:0;color:var(--mu);line-height:1.5}
+#gbtn{min-height:44px;display:flex;justify-content:center}
+.lbox .off{display:flex;flex-direction:column;gap:10px;align-items:center}
+.lbox .err{color:var(--dan)}
+
+@media (max-width:760px){
+  .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px}
+  .status{display:none}
+  .lhead{padding:calc(24px + env(safe-area-inset-top)) 16px 8px}
+  .logo{font-size:38px}
+  .busca{order:3;width:100%}
+  .aviso{margin:4px 16px 0}
+  .lhead .lg{display:none}
+  .lhead{gap:10px}
+  .wrap{padding:8px 16px 120px}
+  .feat{padding:20px}
+  .feat .ft{font-size:26px;padding-right:80px}
+  .ed{padding:8px 16px 140px}
+  .tema{font-size:32px}
+  .partes{grid-template-columns:30px minmax(0,1fr);column-gap:12px}
+  .no b{width:28px;height:28px;font-size:13px}
+  .ph input{font-size:22px}
+  .ref input.ver{width:46px}
+  .pgnav{flex-wrap:wrap;gap:8px 10px}
+  .tparte{order:9;flex-basis:100%;font-size:13px}
+  .timer small{font-size:13px}
+  .pgbar{padding:calc(12px + env(safe-area-inset-top)) 14px 12px}
+  .pgc{font-size:calc(21px*var(--fs))}
+  .pgf{padding:14px}
+  .seg button{font-size:0;padding:0}
+  .timer b{font-size:30px}
+  .nx span{display:none}
+  .nx{padding:0 18px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"></div>
+<div id="toast"></div>
+<div id="login" role="dialog" aria-modal="true" aria-label="Entrar"></div>
+
+<script>
+/* Mostra qualquer erro na tela em vez de deixar a página em branco */
+(function () {
+  function mostrar(msg) {
+    var d = document.getElementById('erro-fatal');
+    if (!d) {
+      d = document.createElement('div');
+      d.id = 'erro-fatal';
+      d.style.cssText = 'position:fixed;left:16px;right:16px;top:16px;z-index:99;padding:16px 18px;border-radius:12px;background:#5a1d18;color:#fff;font:15px/1.5 system-ui,sans-serif;white-space:pre-wrap';
+      (document.body || document.documentElement).appendChild(d);
+    }
+    d.textContent = 'Erro no app: ' + msg + '\n\nTire um print desta mensagem.';
+  }
+  window.addEventListener('error', function (e) {
+    mostrar(e.message + (e.lineno ? ' (linha ' + e.lineno + ')' : ''));
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    mostrar(e.reason && e.reason.message || String(e.reason));
+  });
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ======================= ícones (traço Lucide) ======================= */
+  const ICON = {
+    book: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+    list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+    type: '<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>',
+    quote: '<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>',
+    image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+    note: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h8"/><path d="M8 17h5"/>',
+    play: '<path d="M7 4v16l13-8z" fill="currentColor"/>',
+    back: '<path d="m15 18-6-6 6-6"/>',
+    chevDown: '<path d="m6 9 6 6 6-6"/>',
+    chevUp: '<path d="m18 15-6-6-6 6"/>',
+    chevL: '<path d="m15 18-6-6 6-6"/>',
+    chevR: '<path d="m9 18 6-6-6-6"/>',
+    up: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+    down: '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    clock: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M10 2h4"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+    cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+    copy: '<rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>'
+  };
+  const ic = (n, s = 20) => "<svg width=\"" + s + "\" height=\"" + s + "\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">" + ICON[n] + "</svg>";
+
+  /* ======================= modelo ======================= */
+  const TEMPOS = [20, 30, 40, 50, 60, 90, 120];
+  const VERSOES = ['NBV', 'NVI', 'NVI 2011', 'BLT', 'OL', 'ARA', 'NAA']; /* sugestões; ARA e NAA são preenchidas à mão */
+  const LIMITE = 49000; /* igual a LIMITE_DADOS no Code.gs */
+  const ESPERA_AUTO = 2500; /* ms sem digitar antes do salvamento automático */
+  /* A ordem aqui é a ordem da paleta "Inserir". atalho = letra depois da barra (/v, /p…) */
+  const TIPOS = {
+    biblico: {
+      nome: 'Versículo',
+      atalho: 'v',
+      icon: 'book',
+      novo: () => ({
+        tipo: 'biblico',
+        ref: '',
+        versao: 'NBV',
+        texto: ''
+      })
+    },
+    texto: {
+      nome: 'Parágrafo',
+      atalho: 'p',
+      icon: 'type',
+      novo: () => ({
+        tipo: 'texto',
+        texto: ''
+      })
+    },
+    lista: {
+      nome: 'Lista',
+      atalho: 'l',
+      icon: 'list',
+      novo: () => ({
+        tipo: 'lista',
+        itens: ['']
+      })
+    },
+    citacao: {
+      nome: 'Citação',
+      atalho: 'c',
+      icon: 'quote',
+      novo: () => ({
+        tipo: 'citacao',
+        texto: '',
+        fonte: ''
+      })
+    },
+    imagem: {
+      nome: 'Imagem',
+      atalho: 'i',
+      icon: 'image',
+      novo: () => ({
+        tipo: 'imagem',
+        url: '',
+        legenda: ''
+      })
+    },
+    obs: {
+      nome: 'Nota para mim',
+      atalho: 'n',
+      icon: 'note',
+      novo: () => ({
+        tipo: 'obs',
+        texto: ''
+      })
+    }
+  };
+  /* _local = chave no aparelho enquanto o sermão novo não tem id do servidor */
+  const novaMsg = () => ({
+    id: '',
+    _local: 'local-' + Date.now(),
+    tema: '',
+    pasta: '',
+    tempo: 30,
+    eventos: [],
+    topicos: [{
+      titulo: 'Parte 1',
+      blocos: [],
+      _open: true
+    }]
+  });
+  const S = {
+    view: 'lista',
+    lista: [],
+    carregando: true,
+    filtro: '',
+    msg: null,
+    dirty: false,
+    salvando: false,
+    rev: 0,
+    sobrescrever: false,
+    conflito: false,
+    modal: null,
+    ins: null,
+    /* paleta "Inserir" aberta: { ti, q } */
+    sel: '',
+    /* bloco selecionado "ti:bi" (mostra os botões de mover/remover) */
+    pr: {
+      i: 0,
+      acum: 0,
+      inicio: 0,
+      marca: 0,
+      fs: 1,
+      tp: [],
+      prev: []
+    },
+    timerId: null,
+    wake: null,
+    avisouTela: false,
+    offline: false,
+    sincronizando: false /* sem conexão com o servidor; enviando pendências */
+  };
+
+  /* ======================= utilidades ======================= */
+  const app = document.getElementById('app');
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[c]);
+  /* ======================= configuração ======================= */
+  /* preenchidas pelo build (config.json); vazias = configuração pendente */
+  const meta = n => {
+    const m = document.querySelector('meta[name="' + n + '"]');
+    const v = m ? m.content.trim() : '';
+    return /^\{\{/.test(v) ? '' : v;
+  };
+  const CFG = {
+    api: meta('sermoes:api'),
+    client: meta('sermoes:client')
+  };
+
+  /* ======================= armazenamento no aparelho ======================= */
+  /* localStorage pode falhar (navegação privada, espaço cheio): tudo protegido */
+  const local = {
+    ler(k) {
+      try {
+        const v = localStorage.getItem(k);
+        return v ? JSON.parse(v) : null;
+      } catch (e) {
+        return null;
+      }
+    },
+    gravar(k, v) {
+      try {
+        localStorage.setItem(k, JSON.stringify(v));
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    apagar(k) {
+      try {
+        localStorage.removeItem(k);
+      } catch (e) {}
+    }
+  };
+  const CHAVE_SESSAO = 'sermoes.sessao',
+    CACHE_LISTA = 'sermoes.lista',
+    CACHE_MSG = 'sermoes.msg.',
+    CACHE_PEND = 'sermoes.pend';
+  const chaveMsg = m => m.id || m._local;
+  const pendentes = () => local.ler(CACHE_PEND) || [];
+  function marcarPendente(chave, sim) {
+    if (!chave) return;
+    const p = new Set(pendentes());
+    if (sim) p.add(chave);else p.delete(chave);
+    local.gravar(CACHE_PEND, [...p]);
+  }
+  function guardarMsg(m) {
+    const c = JSON.parse(JSON.stringify(m));
+    c.topicos.forEach(t => delete t._open);
+    if (!local.gravar(CACHE_MSG + chaveMsg(m), c)) toast('Não consegui guardar uma cópia no aparelho (espaço cheio?).', true);
+  }
+
+  /* ======================= servidor (Apps Script) e login ======================= */
+  const erroRede = () => Object.assign(new Error('Sem conexão com o servidor.'), {
+    rede: true
+  });
+  async function chamar(fn, args, cred) {
+    if (!CFG.api) throw new Error('Configuração pendente: falta o endereço da API em config.json.');
+    let resp;
+    try {
+      resp = await fetch(CFG.api, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(Object.assign({
+          fn,
+          args
+        }, cred))
+      });
+    } catch (e) {
+      throw erroRede();
+    }
+    if (!resp.ok) throw new Error('O servidor respondeu ' + resp.status + '. Tente de novo.');
+    try {
+      return await resp.json();
+    } catch (e) {
+      throw new Error('Resposta inesperada do servidor. Confira se a implantação está com acesso "Qualquer pessoa".');
+    }
+  }
+  function lerSessao() {
+    const s = local.ler(CHAVE_SESSAO);
+    return s && s.exp > Date.now() + 60000 ? s : null;
+  }
+
+  /* chama uma função do Code.gs; pede login quando não há sessão ou ela venceu */
+  async function run(fn, ...args) {
+    if (navigator.onLine === false) throw erroRede();
+    const s = lerSessao();
+    let sessao = s ? s.sessao : await pedirLogin();
+    let r = await chamar(fn, args, {
+      sessao
+    });
+    if (!r.ok && r.auth) {
+      local.apagar(CHAVE_SESSAO);
+      sessao = await pedirLogin(r.erro);
+      r = await chamar(fn, args, {
+        sessao
+      });
+    }
+    if (!r.ok) throw Object.assign(new Error(r.erro), r.auth ? {
+      auth: true
+    } : {});
+    return r.data;
+  }
+  let esperaLogin = null; /* { promessa, ok, falhar } enquanto a tela de entrada está aberta */
+  function pedirLogin(motivo) {
+    if (!esperaLogin) {
+      let ok, falhar;
+      const promessa = new Promise((a, b) => {
+        ok = a;
+        falhar = b;
+      });
+      esperaLogin = {
+        promessa,
+        ok,
+        falhar
+      };
+    }
+    mostrarLogin(motivo);
+    return esperaLogin.promessa;
+  }
+
+  /* resposta do "Fazer login com o Google": troca o ID token por uma sessão de 30 dias */
+  async function aoEntrar(resp) {
+    const caixa = document.getElementById('lmsg');
+    if (caixa) {
+      caixa.className = '';
+      caixa.textContent = 'Entrando…';
+    }
+    try {
+      const r = await chamar('entrar', [], {
+        token: resp && resp.credential
+      });
+      if (!r.ok) throw new Error(r.erro);
+      local.gravar(CHAVE_SESSAO, r.data);
+      esconderLogin();
+      if (esperaLogin) {
+        const e = esperaLogin;
+        esperaLogin = null;
+        e.ok(r.data.sessao);
+      }
+    } catch (e) {
+      if (caixa) {
+        caixa.className = 'err';
+        caixa.textContent = textoErro(e);
+      }
+    }
+  }
+  let gisPronto = false;
+  function iniciarGoogle() {
+    if (gisPronto) return true;
+    if (!(window.google && google.accounts && google.accounts.id)) return false;
+    google.accounts.id.initialize({
+      client_id: CFG.client,
+      callback: aoEntrar,
+      auto_select: true,
+      cancel_on_tap_outside: false,
+      itp_support: true,
+      use_fedcm_for_prompt: true
+    });
+    gisPronto = true;
+    return true;
+  }
+  function mostrarLogin(motivo) {
+    const el = document.getElementById('login');
+    if (el.classList.contains('on') && document.getElementById('gbtn')) {
+      const caixa = document.getElementById('lmsg');
+      if (caixa && motivo) caixa.textContent = motivo;
+      return;
+    }
+    el.className = 'on' + (S.view === 'lista' && !S.lista.length ? '' : ' sobre');
+    el.innerHTML = "<div class=\"lbox\">\n    <h1 class=\"logo\">Serm\xF5es</h1>\n    <p id=\"lmsg\">" + esc(motivo || 'Entre com a sua conta Google para abrir os seus sermões.') + "</p>\n    <div id=\"gbtn\"></div>\n    <div class=\"off\" id=\"loff\"></div>\n  </div>";
+    const tentar = n => {
+      if (!document.getElementById('gbtn')) return;
+      if (iniciarGoogle()) {
+        google.accounts.id.renderButton(document.getElementById('gbtn'), {
+          theme: 'filled_black',
+          size: 'large',
+          shape: 'pill',
+          text: 'signin_with',
+          locale: 'pt-BR'
+        });
+        google.accounts.id.prompt();
+      } else if (n < 20) setTimeout(() => tentar(n + 1), 300);else {
+        const off = document.getElementById('loff');
+        if (off) off.innerHTML = '<p>Não foi possível carregar o login do Google. Confira a internet.</p>' + (local.ler(CACHE_LISTA) ? '<button class="btn" data-a="semInternet">Usar o que está salvo no aparelho</button>' : '');
+      }
+    };
+    tentar(0);
+  }
+  function esconderLogin() {
+    const el = document.getElementById('login');
+    el.className = '';
+    el.innerHTML = '';
+  }
+  function mostrarConfig() {
+    const el = document.getElementById('login');
+    el.className = 'on';
+    el.innerHTML = '<div class="lbox"><h1 class="logo">Sermões</h1><p class="err">Configuração pendente: preencha <b>apiUrl</b> e <b>googleClientId</b> no config.json e rode <b>npm run build</b>.</p></div>';
+  }
+  const fmtData = iso => iso ? new Date(iso).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }) : '';
+  const fmtHora = iso => iso ? new Date(iso).toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  }) : '';
+  const fmtDataHora = iso => iso ? new Date(iso).toLocaleString('pt-BR', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  }) : '';
+  const mmss = s => String(Math.floor(s / 60)).padStart(2, '0') + ":" + String(s % 60).padStart(2, '0');
+  const fmtMin = x => x > 0 && x < 1 ? '<1' : String(Math.round(x));
+  const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const plural = (n, um, varios) => n + ' ' + (n === 1 ? um : varios);
+  const textoErro = e => String(e && e.message || e).replace(/^(Exception|Error|Erro|ScriptError):\s*/i, '');
+  function autosize(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 2 + 'px';
+  }
+  let toastT,
+    desfazerFn = null;
+  /* acao = { rotulo, fn } mostra um botão (ex.: "Desfazer") */
+  function toast(txt, erro, acao, ms) {
+    const t = document.getElementById('toast');
+    t.innerHTML = esc(txt) + (acao ? "<button class=\"undo\" data-a=\"desfazer\">" + esc(acao.rotulo) + "</button>" : '');
+    desfazerFn = acao ? acao.fn : null;
+    t.className = 'on' + (erro ? ' err' : '') + (acao ? ' acao' : '');
+    clearTimeout(toastT);
+    toastT = setTimeout(() => {
+      t.className = '';
+      desfazerFn = null;
+    }, ms || (acao ? 6000 : erro ? 5000 : 2200));
+  }
+  const falha = e => toast(textoErro(e), true);
+  const pastas = () => [...new Set(S.lista.map(m => m.pasta).filter(Boolean))].sort();
+
+  /* ======================= tempo por parte ======================= */
+  /* palavras faladas da parte (notas para mim não contam) */
+  function palavras(t) {
+    return (t.blocos || []).reduce((n, b) => {
+      if (b.tipo === 'obs') return n;
+      const s = [b.texto, b.fonte, b.legenda].concat(b.itens || []).filter(Boolean).join(' ').trim();
+      return n + (s ? s.split(/\s+/).length : 0);
+    }, 0);
+  }
+  /* minutos de cada parte: o definido pelo usuário, ou a sobra do alvo dividida pelo volume de texto */
+  function temposPartes(m) {
+    const ts = m.topicos;
+    const fixo = ts.reduce((s, t) => s + (t.tempo > 0 ? +t.tempo : 0), 0);
+    const peso = t => Math.max(15, palavras(t));
+    const pesoLivre = ts.filter(t => !(t.tempo > 0)).reduce((s, t) => s + peso(t), 0);
+    const resto = Math.max(0, (m.tempo || 30) - fixo);
+    return ts.map(t => t.tempo > 0 ? {
+      min: +t.tempo,
+      est: false
+    } : {
+      min: pesoLivre ? resto * peso(t) / pesoLivre : 0,
+      est: true
+    });
+  }
+  /* tamanho do JSON que o servidor grava (mesma forma do salvarMensagem) */
+  function tamanho(m) {
+    return JSON.stringify({
+      eventos: m.eventos || [],
+      topicos: m.topicos.map(t => {
+        const p = {
+          titulo: t.titulo || '',
+          blocos: t.blocos || []
+        };
+        if (t.tempo > 0) p.tempo = +t.tempo;
+        return p;
+      })
+    }).length;
+  }
+
+  /* ======================= lista de sermões ======================= */
+  function vLista() {
+    return "\n  <header class=\"lhead\">\n    <h1 class=\"logo\">Serm\xF5es</h1>\n    <label class=\"busca\">" + ic('search', 16) + "<input data-f=\"filtro\" placeholder=\"Procurar tema, pasta, parte ou vers\xEDculo\" aria-label=\"Procurar serm\xE3o\" value=\"" + esc(S.filtro) + "\"></label>\n    <button class=\"btn pri\" data-a=\"nova\">" + ic('plus', 16) + " Novo<span class=\"lg\"> serm\xE3o</span></button>\n    <button class=\"ic sm\" data-a=\"sair\" title=\"Sair da conta neste aparelho\" aria-label=\"Sair da conta\">" + ic('logout', 18) + "</button>\n  </header>\n  " + (S.offline ? '<div class="aviso">Sem internet: mostrando os sermões salvos neste aparelho. As alterações são enviadas quando a conexão voltar.</div>' : '') + "\n  <main class=\"wrap\"><div id=\"res\">" + vResultados() + "</div></main>";
+  }
+  const chaveItem = m => m.id || m._local;
+  function acoesCard(m) {
+    if (!m.id) return '';
+    return "<div class=\"acts\">\n    <button class=\"ic sm\" data-a=\"duplicar\" data-id=\"" + esc(m.id) + "\" title=\"Duplicar\" aria-label=\"Duplicar serm\xE3o\">" + ic('copy', 16) + "</button>\n    <button class=\"ic sm\" data-a=\"excluir\" data-id=\"" + esc(m.id) + "\" title=\"Excluir\" aria-label=\"Excluir serm\xE3o\">" + ic('trash', 16) + "</button>\n  </div>";
+  }
+  function vDestaque(m) {
+    const n = Math.max(1, m.nTopicos || 0);
+    return "\n  <div class=\"sec\">Mais recente</div>\n  <div class=\"card feat\" data-a=\"abrir\" data-id=\"" + esc(chaveItem(m)) + "\" role=\"button\" tabindex=\"0\">\n    <div class=\"fmeta\">" + (m.pasta ? "<span class=\"tag\">" + esc(m.pasta) + "</span>" : '') + "<span>editado em " + fmtData(m.atualizado) + "</span>" + (pendentes().includes(chaveItem(m)) ? '<span class="pendtag">não enviado</span>' : '') + "</div>\n    <div class=\"ft\">" + esc(m.tema || 'Sem tema') + "</div>\n    <div class=\"mini\" aria-hidden=\"true\">" + '<span></span>'.repeat(n) + "</div>\n    <div class=\"meta\"><span><b>" + m.tempo + "</b> min</span><span><b>" + m.nTopicos + "</b> " + (m.nTopicos === 1 ? 'parte' : 'partes') + "</span></div>\n    " + acoesCard(m) + "\n  </div>";
+  }
+  function vResultados() {
+    if (S.carregando) return '<p class="muted">Carregando…</p>';
+    const q = norm(S.filtro.trim());
+    let itens = S.lista.filter(m => !q || norm(m.tema + ' ' + m.pasta + ' ' + (m.busca || '')).includes(q));
+    if (!itens.length) return "<div class=\"vazio\" style=\"margin-top:20px\">" + (S.lista.length ? 'Nada encontrado.' : 'Nenhum sermão ainda.<br><small>Toque em “Novo sermão” para começar.</small>') + "</div>";
+    let html = '';
+    if (!q) {
+      html += vDestaque(itens[0]);
+      itens = itens.slice(1);
+    }
+    const grupos = {};
+    itens.forEach(m => (grupos[m.pasta || 'Sem pasta'] ||= []).push(m));
+    html += Object.keys(grupos).sort((a, b) => a === 'Sem pasta' ? 1 : b === 'Sem pasta' ? -1 : a.localeCompare(b)).map(p => "\n    <div class=\"sec\">" + ic('folder', 15) + " " + esc(p) + "</div>\n    <div class=\"rows\">" + grupos[p].map(m => "\n      <div class=\"card row\" data-a=\"abrir\" data-id=\"" + esc(chaveItem(m)) + "\" role=\"button\" tabindex=\"0\">\n        <div class=\"ct\">" + esc(m.tema || 'Sem tema') + "</div>\n        <div class=\"cm\">" + m.tempo + " min \xB7 " + plural(m.nTopicos, 'parte', 'partes') + " \xB7 editado em " + fmtData(m.atualizado) + (pendentes().includes(chaveItem(m)) ? ' · <span class="pendtag">não enviado</span>' : '') + "</div>\n        " + acoesCard(m) + "\n      </div>").join('') + "\n    </div>").join('');
+    return html;
+  }
+
+  /* ======================= editor ======================= */
+  const estaPendente = () => !!(S.msg && pendentes().includes(chaveMsg(S.msg)));
+  function txtStatus() {
+    if (S.salvando) return 'Salvando…';
+    if (S.dirty) return 'Salvando em instantes…';
+    if (estaPendente()) return 'Salvo no aparelho · envia quando a internet voltar';
+    return S.msg && S.msg.id ? 'Salvo às ' + fmtHora(S.msg.atualizado) : '';
+  }
+  function vLinhaCap() {
+    const m = S.msg,
+      n = m.topicos.length,
+      tps = temposPartes(m);
+    const total = tps.reduce((s, x) => s + x.min, 0);
+    const pct = Math.round(tamanho(m) / LIMITE * 100);
+    return "" + plural(n, 'parte', 'partes') + (" \xB7 <span class=\"" + (total > m.tempo + 0.5 ? 'warn' : '') + "\">previsto " + fmtMin(total) + " de " + m.tempo + " min</span>") + (" \xB7 <span class=\"" + (pct >= 80 ? 'warn' : '') + "\" title=\"Espa\xE7o usado na c\xE9lula da planilha\">" + pct + "% do espa\xE7o</span>");
+  }
+  function vEditor() {
+    const m = S.msg,
+      n = m.topicos.length,
+      tps = temposPartes(m);
+    return "\n  <header class=\"bar\">\n    <button class=\"ic fill\" data-a=\"voltar\" title=\"Voltar\" aria-label=\"Voltar para os serm\xF5es\">" + ic('back', 20) + "</button><div class=\"sp\"></div>\n    <span class=\"status " + (S.dirty ? 'dirty' : estaPendente() ? 'pend' : '') + "\" id=\"status\">" + txtStatus() + "</span>\n    <button class=\"btn\" data-a=\"salvar\">Salvar</button>\n    <button class=\"btn pri\" data-a=\"pregar\">" + ic('play', 14) + " Pregar</button>\n  </header>\n  <main class=\"ed\">\n    <textarea class=\"tema\" data-f=\"tema\" rows=\"1\" placeholder=\"Tema do serm\xE3o\" aria-label=\"Tema\">" + esc(m.tema) + "</textarea>\n    <div class=\"pills\">\n      <label class=\"pill\">" + ic('folder', 15) + "<input data-f=\"pasta\" placeholder=\"Sem pasta\" list=\"pastas\" aria-label=\"Pasta\" value=\"" + esc(m.pasta) + "\" size=\"" + Math.max(12, (m.pasta || '').length + 2) + "\"></label>\n      <datalist id=\"pastas\">" + pastas().map(p => "<option value=\"" + esc(p) + "\">").join('') + "</datalist>\n      <datalist id=\"versoes\">" + VERSOES.map(v => "<option value=\"" + v + "\">").join('') + "</datalist>\n      <label class=\"pill\">" + ic('clock', 15) + "<span>Alvo de</span><select data-f=\"tempo\" aria-label=\"Dura\xE7\xE3o\">" + TEMPOS.map(t => "<option value=\"" + t + "\" " + (m.tempo == t ? 'selected' : '') + ">" + t + " min</option>").join('') + "</select>" + ic('chevDown', 14) + "</label>\n      " + (m.eventos || []).map((e, i) => "<span class=\"pill ev\">" + ic('cal', 15) + esc(e.titulo) + " \xB7 " + fmtData(e.data) + "<button class=\"ic sm\" data-a=\"desvEvento\" data-i=\"" + i + "\" title=\"Desligar\" aria-label=\"Desligar este culto\">" + ic('x', 14) + "</button></span>").join('') + "\n      <button class=\"pill add\" data-a=\"vincular\">" + ic('plus', 15) + " Ligar a um culto</button>\n    </div>\n\n    " + (n > 1 ? "<div class=\"tl\" id=\"tl\">" + m.topicos.map((t, ti) => "<button class=\"" + (t._open ? 'on' : '') + "\" style=\"flex:" + Math.max(0.5, tps[ti].min) + "\" data-a=\"irParte\" data-t=\"" + ti + "\" title=\"" + esc(t.titulo || 'Parte ' + (ti + 1)) + " \xB7 " + fmtMin(tps[ti].min) + " min\">" + (ti + 1) + "</button>").join('') + "</div>" : '') + "\n    <div class=\"tlcap\" id=\"tlcap\">" + vLinhaCap() + "</div>\n\n    <div class=\"partes\">\n      " + m.topicos.map((t, ti) => vParte(t, ti, tps[ti])).join('') + "\n      <div class=\"no add\"><b>" + ic('plus', 14) + "</b></div>\n      <div class=\"pt\"><button class=\"tt\" data-a=\"addTopico\" style=\"color:var(--ac)\">Nova parte</button></div>\n    </div>\n  </main>";
+  }
+  function vParte(t, ti, tp) {
+    const ult = ti === S.msg.topicos.length - 1;
+    const titulo = t.titulo || 'Parte ' + (ti + 1);
+    const no = "<div class=\"no " + (t._open ? 'on' : '') + "\"><b>" + (ti + 1) + "</b><i></i></div>";
+    if (!t._open) {
+      return no + ("<div class=\"pt\" id=\"top-" + ti + "\"><button class=\"tt\" data-a=\"toggle\" data-t=\"" + ti + "\"><span>" + esc(titulo) + "</span><small>" + plural(t.blocos.length, 'bloco', 'blocos') + " \xB7 " + (tp.est ? '≈ ' : '') + fmtMin(tp.min) + " min</small></button></div>");
+    }
+    return no + ("\n  <section class=\"po\" id=\"top-" + ti + "\">\n    <div class=\"ph\">\n      <input data-f=\"titulo\" data-t=\"" + ti + "\" value=\"" + esc(t.titulo) + "\" placeholder=\"Parte " + (ti + 1) + "\" aria-label=\"T\xEDtulo da parte\">\n      <button class=\"ic sm\" data-a=\"topUp\" data-t=\"" + ti + "\" " + (ti === 0 ? 'disabled' : '') + " title=\"Subir parte\" aria-label=\"Subir parte\">" + ic('up', 16) + "</button>\n      <button class=\"ic sm\" data-a=\"topDown\" data-t=\"" + ti + "\" " + (ult ? 'disabled' : '') + " title=\"Descer parte\" aria-label=\"Descer parte\">" + ic('down', 16) + "</button>\n      <button class=\"ic sm\" data-a=\"toggle\" data-t=\"" + ti + "\" title=\"Recolher\" aria-label=\"Recolher parte\">" + ic('chevUp', 18) + "</button>\n    </div>\n    <div class=\"pmeta\">\n      <label class=\"pill sm\" title=\"Tempo previsto para esta parte\">" + ic('clock', 14) + "<input type=\"number\" inputmode=\"numeric\" min=\"1\" max=\"180\" data-f=\"ttempo\" data-t=\"" + ti + "\" value=\"" + (t.tempo > 0 ? t.tempo : '') + "\" placeholder=\"" + fmtMin(tp.min) + "\" aria-label=\"Minutos previstos para esta parte\"><span>min</span></label>\n      <small class=\"muted\" id=\"est-" + ti + "\">" + (t.tempo > 0 ? 'definido por você' : 'estimado pelo texto') + "</small>\n    </div>\n    " + t.blocos.map((b, bi) => vBloco(b, ti, bi, t.blocos.length)).join('') + "\n    <div>\n      <div class=\"ins\">\n        <input data-f=\"ins\" data-t=\"" + ti + "\" placeholder=\"Escreva aqui ou digite / para inserir\" aria-label=\"Novo bloco\">\n        <button class=\"ic fill\" data-a=\"inserir\" data-t=\"" + ti + "\" title=\"Inserir bloco\" aria-label=\"Inserir bloco\">" + ic('plus', 18) + "</button>\n      </div>\n      <div id=\"pal-" + ti + "\">" + vPaleta(ti) + "</div>\n    </div>\n    <div class=\"pfoot\"><button class=\"link danger\" data-a=\"delTopico\" data-t=\"" + ti + "\">" + ic('trash', 15) + " Excluir parte</button></div>\n  </section>");
+  }
+
+  /* tipos que combinam com o que foi digitado depois da barra */
+  function tiposFiltrados(q) {
+    q = norm(q);
+    return Object.keys(TIPOS).filter(k => !q || TIPOS[k].atalho === q || norm(TIPOS[k].nome).startsWith(q));
+  }
+  function vPaleta(ti) {
+    if (!S.ins || S.ins.ti !== ti) return '';
+    const ks = tiposFiltrados(S.ins.q);
+    return "<div class=\"pal\" role=\"menu\">" + (ks.length ? ks.map((k, i) => "<button class=\"" + (i === 0 ? 'on' : '') + "\" role=\"menuitem\" data-a=\"addBloco\" data-t=\"" + ti + "\" data-v=\"" + k + "\">" + ic(TIPOS[k].icon, 18) + "<span>" + TIPOS[k].nome + "</span><small>/" + TIPOS[k].atalho + "</small></button>").join('') : '<p>Nenhum tipo com esse nome.</p>') + "</div>";
+  }
+  function vBloco(b, ti, bi, n) {
+    const T = TIPOS[b.tipo] || TIPOS.texto;
+    let corpo = '';
+    switch (b.tipo) {
+      case 'biblico':
+        corpo = "<div class=\"ref\"><input data-f=\"ref\" placeholder=\"Refer\xEAncia (ex.: Mateus 24:45-47)\" aria-label=\"Refer\xEAncia\" value=\"" + esc(b.ref) + "\"><input class=\"ver\" data-f=\"versao\" list=\"versoes\" placeholder=\"NBV\" aria-label=\"Vers\xE3o\" value=\"" + esc(b.versao) + "\"><button class=\"buscar\" data-a=\"buscarVers\" title=\"Buscar o texto no YouVersion\">" + ic('search', 14) + " Buscar</button></div>\n        <textarea class=\"ta\" data-f=\"texto\" rows=\"1\" placeholder=\"Texto do vers\xEDculo (ou toque em Buscar)\">" + esc(b.texto) + "</textarea>\n        " + (b.copyright ? "<div class=\"copy\">" + esc(b.copyright) + "</div>" : '');
+        break;
+      case 'lista':
+        corpo = (b.itens || []).map((it, li) => "<div class=\"li\"><input class=\"ta\" data-f=\"item\" data-li=\"" + li + "\" value=\"" + esc(it) + "\" placeholder=\"Item\"><button class=\"ic sm\" data-a=\"delItem\" data-li=\"" + li + "\" aria-label=\"Apagar item\">" + ic('x', 14) + "</button></div>").join('') + ("<button class=\"link\" data-a=\"addItem\">" + ic('plus', 15) + " Adicionar item</button>");
+        break;
+      case 'citacao':
+        corpo = "<textarea class=\"ta\" data-f=\"texto\" rows=\"1\" placeholder=\"Texto da cita\xE7\xE3o\">" + esc(b.texto) + "</textarea>\n        <input class=\"fonte\" data-f=\"fonte\" placeholder=\"Autor e fonte (ex.: Ellen G. White, Conselhos sobre a Escola Sabatina, p. 10)\" aria-label=\"Fonte\" value=\"" + esc(b.fonte) + "\">";
+        break;
+      case 'imagem':
+        corpo = (b.url ? "<img class=\"prev\" src=\"" + esc(b.url) + "\" alt=\"\">" : '') + "\n        <label class=\"up\">" + ic('upload', 16) + " Enviar imagem do aparelho<input type=\"file\" accept=\"image/*\" data-f=\"arquivo\"></label>\n        <input class=\"inp2\" data-f=\"url\" placeholder=\"\u2026ou cole o link de uma imagem\" aria-label=\"Link da imagem\" value=\"" + esc(b.url) + "\">\n        <input class=\"inp2\" data-f=\"legenda\" placeholder=\"Legenda (opcional)\" aria-label=\"Legenda\" value=\"" + esc(b.legenda) + "\">";
+        break;
+      case 'obs':
+        corpo = "<textarea class=\"ta\" data-f=\"texto\" rows=\"1\" placeholder=\"Lembrete s\xF3 para voc\xEA (aparece discreto no modo Pregar)\">" + esc(b.texto) + "</textarea>";
+        break;
+      default:
+        corpo = "<textarea class=\"ta\" data-f=\"texto\" rows=\"1\" placeholder=\"Escreva aqui\">" + esc(b.texto) + "</textarea>";
+    }
+    const sel = S.sel === ti + ':' + bi ? ' sel' : '';
+    return "\n  <div class=\"bl t-" + b.tipo + sel + "\" data-t=\"" + ti + "\" data-b=\"" + bi + "\">\n    <div class=\"bh\"><span>" + T.nome + "</span>\n      <button class=\"ic sm\" data-a=\"blUp\" " + (bi === 0 ? 'disabled' : '') + " title=\"Subir\" aria-label=\"Subir bloco\">" + ic('up', 15) + "</button>\n      <button class=\"ic sm\" data-a=\"blDown\" " + (bi === n - 1 ? 'disabled' : '') + " title=\"Descer\" aria-label=\"Descer bloco\">" + ic('down', 15) + "</button>\n      <button class=\"ic sm\" data-a=\"blDel\" title=\"Remover\" aria-label=\"Remover bloco\">" + ic('trash', 15) + "</button>\n    </div>\n    <div class=\"bc\">" + corpo + "</div>\n  </div>";
+  }
+
+  /* ======================= modo pregar ======================= */
+  function vPregar() {
+    const m = S.msg,
+      n = m.topicos.length,
+      i = S.pr.i,
+      t = m.topicos[i] || {
+        titulo: '',
+        blocos: []
+      };
+    const prox = m.topicos[i + 1],
+      prev = S.pr.prev;
+    return "\n  <div class=\"pg\" style=\"--fs:" + S.pr.fs + "\">\n    <header class=\"pgbar\">\n      <button class=\"ic fill\" data-a=\"sairPregar\" title=\"Sair\" aria-label=\"Sair do modo Pregar\">" + ic('x', 20) + "</button>\n      <div class=\"pgtema\">" + esc(m.tema) + "</div>\n      <button class=\"ic fill fs\" data-a=\"fonte\" data-v=\"-1\" title=\"Diminuir letra\" aria-label=\"Diminuir letra\">A\u2212</button>\n      <button class=\"ic fill fs\" data-a=\"fonte\" data-v=\"1\" title=\"Aumentar letra\" aria-label=\"Aumentar letra\">A+</button>\n    </header>\n    <main class=\"pgc\" id=\"pgc\">\n      <div class=\"pgk\">Parte " + (i + 1) + " de " + n + "</div>\n      <h1 class=\"pgt\">" + esc(t.titulo || 'Parte ' + (i + 1)) + "</h1>\n      " + t.blocos.map(vLeitura).join('') + "\n    </main>\n    <footer class=\"pgf\">\n      <div class=\"seg\">\n        " + m.topicos.map((tp, k) => "<button class=\"" + (k < i ? 'feito' : k === i ? 'on' : '') + "\" style=\"flex:" + Math.max(0.5, prev[k] ? prev[k].min : 1) + "\" data-a=\"pgIr\" data-v=\"" + k + "\" title=\"" + esc(tp.titulo || 'Parte ' + (k + 1)) + "\">" + (k === i ? k + 1 + ' · ' + esc(tp.titulo || 'Parte ' + (k + 1)) : k + 1) + "</button>").join('') + "\n        <span id=\"playhead\"></span>\n      </div>\n      <div class=\"pgnav\">\n        <button class=\"timer\" id=\"timer\" data-a=\"timer\" title=\"Pausar / continuar\" aria-label=\"Pausar ou continuar o cron\xF4metro\"></button>\n        <span class=\"tparte\" id=\"tparte\"></span>\n        <div class=\"sp\"></div>\n        <button class=\"pv\" data-a=\"pgIr\" data-v=\"" + (i - 1) + "\" " + (i === 0 ? 'disabled' : '') + " aria-label=\"Parte anterior\">" + ic('chevL', 22) + "</button>\n        <button class=\"nx\" data-a=\"pgIr\" data-v=\"" + (i + 1) + "\" " + (prox ? '' : 'disabled') + "><span>" + (prox ? esc(prox.titulo || 'Parte ' + (i + 2)) : 'Última parte') + "</span>" + ic('chevR', 20) + "</button>\n      </div>\n    </footer>\n  </div>";
+  }
+  function vLeitura(b) {
+    switch (b.tipo) {
+      case 'biblico':
+        return "<div class=\"r-bib\"><div class=\"r-ref\">" + esc(b.ref) + (b.versao ? "<span>" + esc(b.versao) + "</span>" : '') + "</div><p>" + esc(b.texto) + "</p>" + (b.copyright ? "<small class=\"r-copy\">" + esc(b.copyright) + "</small>" : '') + "</div>";
+      case 'lista':
+        return "<ul class=\"r-list\">" + (b.itens || []).filter(x => x.trim()).map(x => "<li>" + esc(x) + "</li>").join('') + "</ul>";
+      case 'citacao':
+        return "<blockquote class=\"r-cit\"><p>\u201C" + esc(b.texto) + "\u201D</p>" + (b.fonte ? "<cite>" + esc(b.fonte) + "</cite>" : '') + "</blockquote>";
+      case 'imagem':
+        return b.url ? "<figure class=\"r-img\"><img src=\"" + esc(b.url) + "\" alt=\"\">" + (b.legenda ? "<figcaption>" + esc(b.legenda) + "</figcaption>" : '') + "</figure>" : '';
+      case 'obs':
+        return b.texto ? "<div class=\"r-obs\"><b>Nota \xB7</b>" + esc(b.texto) + "</div>" : '';
+      default:
+        return b.texto ? "<p class=\"r-txt\">" + esc(b.texto) + "</p>" : '';
+    }
+  }
+  function vModal() {
+    if (!S.modal) return '';
+    const it = S.modal.itens;
+    return "\n  <div class=\"ov\" data-a=\"fecharModal\">\n    <div class=\"md\">\n      <div class=\"mh\"><b>Ligar a um culto da agenda</b><button class=\"ic\" data-a=\"fecharModal\" aria-label=\"Fechar\">" + ic('x') + "</button></div>\n      <div class=\"ml\">" + (it === null ? '<p class="muted">Carregando agenda…</p>' : it.length ? it.map((e, i) => "<button class=\"mi\" data-a=\"pickEvento\" data-i=\"" + i + "\"><span>" + esc(e.titulo || '(sem título)') + "</span><small>" + fmtDataHora(e.data) + "</small></button>").join('') : '<p class="muted">Nenhum evento entre a semana passada e os próximos 90 dias.</p>') + "</div>\n    </div>\n  </div>";
+  }
+
+  /* ======================= render ======================= */
+  function render() {
+    app.innerHTML = S.view === 'lista' ? vLista() : S.view === 'editor' ? vEditor() : vPregar();
+    document.getElementById('modal').innerHTML = vModal();
+    app.querySelectorAll('textarea').forEach(autosize);
+    if (S.view === 'pregar') tick();
+  }
+  function atualizarStatus() {
+    const el = document.getElementById('status');
+    if (!el) return;
+    el.className = 'status' + (S.dirty ? ' dirty' : !S.salvando && estaPendente() ? ' pend' : '');
+    el.textContent = txtStatus();
+  }
+
+  /* atualiza a linha do tempo, a legenda e as estimativas sem re-renderizar (não perde o foco) */
+  function atualizarLinha() {
+    if (S.view !== 'editor' || !S.msg) return;
+    const tps = temposPartes(S.msg);
+    const cap = document.getElementById('tlcap');
+    if (cap) cap.innerHTML = vLinhaCap();
+    app.querySelectorAll('#tl button').forEach((b, ti) => {
+      if (!tps[ti]) return;
+      b.style.flex = Math.max(0.5, tps[ti].min);
+      b.title = (S.msg.topicos[ti].titulo || 'Parte ' + (ti + 1)) + ' · ' + fmtMin(tps[ti].min) + ' min';
+    });
+    app.querySelectorAll('[data-f="ttempo"]').forEach(inp => {
+      const ti = +inp.dataset.t;
+      if (!tps[ti]) return;
+      inp.placeholder = fmtMin(tps[ti].min);
+      const est = document.getElementById('est-' + ti);
+      if (est) est.textContent = S.msg.topicos[ti].tempo > 0 ? 'definido por você' : 'estimado pelo texto';
+    });
+  }
+
+  /* cada edição: cópia no aparelho quase na hora (protege contra fechar o app) e envio ao servidor depois */
+  let localT = null;
+  function guardarLocal() {
+    clearTimeout(localT);
+    localT = setTimeout(() => {
+      if (S.msg && S.view !== 'lista') {
+        guardarMsg(S.msg);
+        marcarPendente(chaveMsg(S.msg), true);
+      }
+    }, 300);
+  }
+  function marcar() {
+    S.dirty = true;
+    S.rev++;
+    guardarLocal();
+    atualizarStatus();
+    atualizarLinha();
+    agendarAuto();
+  }
+  function focar(sel) {
+    const el = app.querySelector(sel);
+    if (el) {
+      el.focus();
+      el.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth'
+      });
+    }
+  }
+  function atualizarPaleta(ti) {
+    const c = document.getElementById('pal-' + ti);
+    if (c) c.innerHTML = vPaleta(ti);
+  }
+
+  /* bloco selecionado: mostra só nele os botões de subir/descer/remover */
+  function selecionar(bl) {
+    const chave = bl.dataset.t + ':' + bl.dataset.b;
+    if (S.sel === chave && bl.classList.contains('sel')) return;
+    app.querySelectorAll('.bl.sel').forEach(x => x.classList.remove('sel'));
+    bl.classList.add('sel');
+    S.sel = chave;
+  }
+  function novoBloco(ti, tipo, texto) {
+    const T = S.msg.topicos[ti];
+    const b = TIPOS[tipo].novo();
+    if (texto) b.texto = texto;
+    T.blocos.push(b);
+    S.ins = null;
+    S.sel = ti + ':' + (T.blocos.length - 1);
+    marcar();
+    render();
+    const sel = ".bl[data-t=\"" + ti + "\"][data-b=\"" + (T.blocos.length - 1) + "\"]";
+    if (texto) focar("[data-f=\"ins\"][data-t=\"" + ti + "\"]");else focar(sel + ' input, ' + sel + ' textarea');
+  }
+
+  /* Busca o texto do bloco Versículo no YouVersion (pelo servidor) */
+  async function buscarVers(B, btn) {
+    if (!B || B.tipo !== 'biblico') return;
+    if (!String(B.ref || '').trim()) {
+      toast('Escreva a referência primeiro (ex.: Mateus 24:45-47).', true);
+      return;
+    }
+    if (String(B.texto || '').trim() && !confirm('Substituir o texto atual pelo texto do YouVersion?')) return;
+    if (!String(B.versao || '').trim()) B.versao = 'NBV';
+    if (btn) {
+      btn.disabled = true;
+      btn.lastChild.textContent = ' Buscando…';
+    }
+    try {
+      const r = await run('buscarVersiculo', B.ref, B.versao);
+      B.texto = r.texto;
+      B.copyright = r.copyright || '';
+      if (r.referencia) B.ref = r.referencia; // forma oficial, ex.: "Hebreus 10:24-25"
+      marcar();
+      render();
+      toast('Texto preenchido' + (r.referencia ? ': ' + r.referencia : ''));
+    } catch (e) {
+      falha(e);
+      if (btn && btn.isConnected) {
+        btn.disabled = false;
+        btn.lastChild.textContent = ' Buscar';
+      }
+    }
+  }
+
+  /* ======================= dados ======================= */
+  async function carregarLista() {
+    S.carregando = true;
+    S.view = 'lista';
+    render();
+    try {
+      S.lista = await run('listarMensagens');
+      local.gravar(CACHE_LISTA, S.lista);
+      S.offline = false;
+    } catch (e) {
+      if (e.rede) {
+        S.lista = local.ler(CACHE_LISTA) || [];
+        S.offline = true;
+      } else falha(e);
+    }
+    /* sermões criados neste aparelho e ainda não enviados */
+    pendentes().filter(k => k.indexOf('local-') === 0).forEach(k => {
+      const m = local.ler(CACHE_MSG + k);
+      if (m && !S.lista.some(x => x._local === k)) {
+        S.lista.unshift({
+          id: '',
+          _local: k,
+          tema: m.tema,
+          pasta: m.pasta,
+          tempo: m.tempo,
+          nTopicos: m.topicos.length,
+          atualizado: new Date(+k.slice(6)).toISOString(),
+          busca: ''
+        });
+      }
+    });
+    S.carregando = false;
+    render();
+  }
+
+  /* chave = id do servidor ou "local-…" (criado sem internet) */
+  async function abrir(chave) {
+    const pend = pendentes().includes(chave),
+      copia = local.ler(CACHE_MSG + chave);
+    let m = null;
+    if ((pend || chave.indexOf('local-') === 0) && copia) m = copia; // alterações deste aparelho têm prioridade
+    else {
+      try {
+        toast('Abrindo…');
+        m = await run('obterMensagem', chave);
+        guardarMsg(m);
+        S.offline = false;
+      } catch (e) {
+        if (!e.rede) return falha(e);
+        m = copia;
+        S.offline = true;
+        if (!m) return toast('Este sermão ainda não foi aberto neste aparelho. Abra-o uma vez com internet.', true);
+        toast('Sem internet: abrindo a cópia salva no aparelho.');
+      }
+    }
+    if (!m) return toast('Sermão não encontrado no aparelho.', true);
+    m.topicos.forEach((t, i) => t._open = i === 0);
+    S.msg = m;
+    S.dirty = false;
+    S.ins = null;
+    S.sel = '';
+    S.view = 'editor';
+    render();
+    window.scrollTo(0, 0);
+    if (pend) {
+      S.dirty = true;
+      atualizarStatus();
+      agendarAuto();
+    } // tenta enviar o que ficou pendente
+  }
+
+  /* envia ao servidor os sermões alterados sem internet */
+  async function sincronizar() {
+    if (S.sincronizando || navigator.onLine === false || !lerSessao()) return;
+    const lista = pendentes();
+    if (!lista.length) return;
+    S.sincronizando = true;
+    let enviados = 0;
+    for (const k of lista) {
+      if (S.msg && chaveMsg(S.msg) === k && S.view !== 'lista') {
+        if ((await salvar(true)) === true) enviados++;
+        continue;
+      }
+      const m = local.ler(CACHE_MSG + k);
+      if (!m) {
+        marcarPendente(k, false);
+        continue;
+      }
+      const c = JSON.parse(JSON.stringify(m));
+      delete c._local;
+      try {
+        const r = await run('salvarMensagem', c);
+        m.id = r.id;
+        m.atualizado = r.atualizado;
+        delete m._local;
+        if (k.indexOf('local-') === 0) local.apagar(CACHE_MSG + k);
+        guardarMsg(m);
+        marcarPendente(k, false);
+        enviados++;
+      } catch (e) {
+        if (e.rede) break;
+        toast('Não foi possível enviar “' + (m.tema || 'Sem tema') + '”: ' + textoErro(e).replace(/^CONFLITO:\s*/i, '') + (/^CONFLITO/i.test(textoErro(e)) ? ' Abra o sermão para escolher a versão.' : ''), true, null, 9000);
+      }
+    }
+    S.sincronizando = false;
+    if (enviados) {
+      S.offline = false;
+      toast(enviados === 1 ? '1 sermão enviado ao servidor' : enviados + ' sermões enviados ao servidor');
+      if (S.view === 'lista') carregarLista();
+    }
+  }
+
+  /* ---------- salvamento (manual e automático) ---------- */
+  let autoT = null;
+  function agendarAuto() {
+    clearTimeout(autoT);
+    if (S.view !== 'editor') return;
+    autoT = setTimeout(() => {
+      if (S.dirty && S.view === 'editor' && !S.conflito) salvar(true);
+    }, ESPERA_AUTO);
+  }
+
+  /* silencioso = salvamento automático (sem aviso "Sermão salvo") */
+  async function salvar(silencioso) {
+    if (S.salvando) {
+      agendarAuto();
+      return false;
+    }
+    clearTimeout(autoT);
+    clearTimeout(localT);
+    const m = S.msg;
+    guardarMsg(m);
+    marcarPendente(chaveMsg(m), true); // primeiro, a cópia no aparelho
+    S.salvando = true;
+    atualizarStatus();
+    const rev = S.rev,
+      copia = JSON.parse(JSON.stringify(m));
+    delete copia._local;
+    if (S.sobrescrever) copia._sobrescrever = true;
+    let r = null,
+      erro = null;
+    try {
+      r = await run('salvarMensagem', copia);
+    } catch (e) {
+      erro = e;
+    }
+    S.salvando = false;
+    S.sobrescrever = false;
+    if (r) {
+      m.id = r.id;
+      m.atualizado = r.atualizado;
+      if (m._local) {
+        local.apagar(CACHE_MSG + m._local);
+        marcarPendente(m._local, false);
+        delete m._local;
+      }
+      S.dirty = S.rev !== rev; // editou durante o salvamento: continua pendente
+      guardarMsg(m);
+      if (!S.dirty) marcarPendente(m.id, false);
+      S.offline = false;
+      atualizarStatus();
+      if (S.dirty) agendarAuto();else if (!silencioso) toast('Sermão salvo');
+      return true;
+    }
+    if (erro && erro.rede) {
+      // sem internet: fica no aparelho e vai depois
+      S.dirty = false;
+      S.offline = true;
+      atualizarStatus();
+      if (!silencioso) toast('Sem internet: salvo no aparelho. Envio quando a conexão voltar.');
+      return 'local';
+    }
+    atualizarStatus();
+    if (/^CONFLITO/i.test(textoErro(erro))) return resolverConflito(erro);
+    falha(erro);
+    if (silencioso) {
+      clearTimeout(autoT);
+      autoT = setTimeout(() => S.dirty && salvar(true), 15000);
+    } // tenta de novo
+    return false;
+  }
+
+  /* outro aparelho salvou este sermão depois que ele foi aberto aqui */
+  async function resolverConflito(erro) {
+    S.conflito = true;
+    const motivo = textoErro(erro).replace(/^CONFLITO:\s*/i, '');
+    const manter = confirm(motivo.charAt(0).toUpperCase() + motivo.slice(1) + '\n\nOK: manter a versão deste aparelho (substitui a outra).' + '\nCancelar: descartar as alterações daqui e abrir a versão salva.');
+    S.conflito = false;
+    if (manter) {
+      S.sobrescrever = true;
+      return salvar();
+    }
+    S.dirty = false;
+    marcarPendente(S.msg.id, false);
+    local.apagar(CACHE_MSG + S.msg.id); // descarta a cópia deste aparelho
+    await abrir(S.msg.id);
+    return false;
+  }
+
+  /* ======================= tela acesa no modo Pregar ======================= */
+  async function manterTela() {
+    try {
+      if ('wakeLock' in navigator && !S.wake) {
+        S.wake = await navigator.wakeLock.request('screen');
+        S.wake.addEventListener('release', () => {
+          S.wake = null;
+        });
+      }
+      return !!S.wake;
+    } catch (e) {
+      return false;
+    }
+  }
+  function soltarTela() {
+    try {
+      if (S.wake) S.wake.release();
+    } catch (e) {}
+    S.wake = null;
+  }
+
+  /* ======================= cronômetro ======================= */
+  function tempoDecorrido() {
+    return S.pr.acum + (S.pr.inicio ? Date.now() - S.pr.inicio : 0);
+  }
+  /* soma ao tempo da parte atual o que passou desde a última marca */
+  function fecharParte() {
+    if (!S.pr.inicio) return;
+    const agora = Date.now();
+    S.pr.tp[S.pr.i] = (S.pr.tp[S.pr.i] || 0) + agora - S.pr.marca;
+    S.pr.marca = agora;
+  }
+  function tick() {
+    const el = document.getElementById('timer');
+    if (!el) return;
+    const s = Math.floor(tempoDecorrido() / 1000),
+      alvo = (S.msg.tempo || 30) * 60;
+    el.innerHTML = "<b>" + mmss(s) + "</b><small>de " + mmss(alvo) + "</small>";
+    el.className = 'timer' + (s > alvo ? ' over' : s > alvo * 0.85 ? ' warn' : '') + (S.pr.inicio ? '' : ' paused');
+    const ph = document.getElementById('playhead');
+    if (ph) {
+      ph.style.left = Math.min(100, s / alvo * 100) + '%';
+      ph.className = s > alvo ? 'over' : '';
+    }
+    const tp = document.getElementById('tparte');
+    if (tp) {
+      const i = S.pr.i,
+        prev = S.pr.prev[i] ? S.pr.prev[i].min : 0;
+      const sp = Math.floor(((S.pr.tp[i] || 0) + (S.pr.inicio ? Date.now() - S.pr.marca : 0)) / 1000);
+      tp.innerHTML = "Nesta parte <b>" + mmss(sp) + "</b>" + (prev ? " de " + fmtMin(prev) + " min" : '');
+      tp.className = 'tparte' + (prev && sp > prev * 60 ? ' warn' : '');
+    }
+  }
+  function entrarPregar() {
+    const agora = Date.now();
+    S.pr = {
+      i: 0,
+      acum: 0,
+      inicio: agora,
+      marca: agora,
+      fs: S.pr.fs || 1,
+      tp: [],
+      prev: temposPartes(S.msg)
+    };
+    S.ins = null;
+    S.view = 'pregar';
+    render();
+    clearInterval(S.timerId);
+    S.timerId = setInterval(tick, 500);
+    manterTela().then(ok => {
+      if (!ok && !S.avisouTela) {
+        S.avisouTela = true;
+        toast('Este navegador não deixou manter a tela acesa. No iPad: Ajustes → Tela e Brilho → Bloqueio Automático → Nunca.', false, null, 8000);
+      }
+    });
+  }
+  function sairPregar() {
+    clearInterval(S.timerId);
+    soltarTela();
+    S.view = 'editor';
+    render();
+  }
+  function irTopico(k) {
+    const n = S.msg.topicos.length;
+    if (k < 0 || k >= n) return;
+    fecharParte();
+    S.pr.i = k;
+    render();
+    const c = document.getElementById('pgc');
+    if (c) c.scrollTop = 0;
+  }
+
+  /* ======================= eventos ======================= */
+  document.addEventListener('click', async e => {
+    const el = e.target.closest('[data-a]');
+    if (!el || el.disabled) return;
+    if (el.classList.contains('ov') && e.target !== el) return; // clique dentro do modal
+    const a = el.dataset.a,
+      m = S.msg;
+    const bl = el.closest('.bl');
+    const ti = el.dataset.t != null ? +el.dataset.t : bl ? +bl.dataset.t : -1;
+    const bi = bl ? +bl.dataset.b : -1;
+    const T = ti >= 0 && m ? m.topicos[ti] : null;
+    const B = T && bi >= 0 ? T.blocos[bi] : null;
+    const swap = (arr, i, j) => {
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    };
+    switch (a) {
+      case 'semInternet':
+        esconderLogin();
+        if (esperaLogin) {
+          const w = esperaLogin;
+          esperaLogin = null;
+          w.falhar(erroRede());
+        }
+        break;
+      case 'sair':
+        if (!confirm('Sair da conta neste aparelho? Os sermões ainda não enviados continuam guardados aqui.')) return;
+        try {
+          const s = lerSessao();
+          if (s) await chamar('sair', [], {
+            sessao: s.sessao
+          });
+        } catch (err) {}
+        local.apagar(CHAVE_SESSAO);
+        try {
+          if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
+        } catch (err) {}
+        S.lista = [];
+        carregarLista();
+        break;
+      case 'desfazer':
+        {
+          const fn = desfazerFn;
+          desfazerFn = null;
+          document.getElementById('toast').className = '';
+          if (fn) fn();
+          break;
+        }
+      /* lista */
+      case 'nova':
+        S.msg = novaMsg();
+        S.dirty = false;
+        S.offline = navigator.onLine === false;
+        S.ins = null;
+        S.sel = '';
+        S.view = 'editor';
+        render();
+        window.scrollTo(0, 0);
+        focar('[data-f="tema"]');
+        break;
+      case 'abrir':
+        abrir(el.dataset.id);
+        break;
+      case 'excluir':
+        e.stopPropagation();
+        if (!confirm('Excluir este sermão? Não dá para desfazer.')) return;
+        try {
+          await run('excluirMensagem', el.dataset.id);
+          toast('Sermão excluído');
+          carregarLista();
+        } catch (err) {
+          falha(err);
+        }
+        break;
+      case 'duplicar':
+        e.stopPropagation();
+        try {
+          await run('duplicarMensagem', el.dataset.id);
+          toast('Cópia criada');
+          carregarLista();
+        } catch (err) {
+          falha(err);
+        }
+        break;
+
+      /* editor */
+      case 'voltar':
+        if (S.dirty && !(await salvar(true)) && !confirm('Não foi possível salvar. Sair mesmo assim e perder as alterações?')) return;
+        clearTimeout(autoT);
+        S.dirty = false;
+        carregarLista();
+        break;
+      case 'salvar':
+        salvar();
+        break;
+      case 'pregar':
+        if (!m.topicos.length) return toast('Adicione ao menos uma parte.', true);
+        if (S.dirty && !(await salvar(true)) && !confirm('Não foi possível salvar. Pregar mesmo assim?')) return;
+        entrarPregar();
+        break;
+      case 'vincular':
+        S.modal = {
+          itens: null
+        };
+        render();
+        try {
+          S.modal.itens = await run('listarEventos');
+        } catch (err) {
+          S.modal = null;
+          falha(err);
+        }
+        render();
+        break;
+      case 'pickEvento':
+        {
+          const ev = S.modal.itens[+el.dataset.i];
+          m.eventos = m.eventos || [];
+          if (!m.eventos.some(x => x.id === ev.id)) m.eventos.push(ev);
+          S.modal = null;
+          marcar();
+          render();
+          break;
+        }
+      case 'fecharModal':
+        S.modal = null;
+        render();
+        break;
+      case 'desvEvento':
+        m.eventos.splice(+el.dataset.i, 1);
+        marcar();
+        render();
+        break;
+      case 'irParte':
+        T._open = true;
+        render();
+        {
+          const sec = document.getElementById('top-' + ti);
+          if (sec) sec.scrollIntoView({
+            block: 'start',
+            behavior: 'smooth'
+          });
+        }
+        break;
+      case 'addTopico':
+        m.topicos.forEach(t => t._open = false);
+        m.topicos.push({
+          titulo: 'Parte ' + (m.topicos.length + 1),
+          blocos: [],
+          _open: true
+        });
+        S.ins = null;
+        S.sel = '';
+        marcar();
+        render();
+        focar("[data-f=\"titulo\"][data-t=\"" + (m.topicos.length - 1) + "\"]");
+        break;
+      case 'toggle':
+        T._open = !T._open;
+        if (S.ins && S.ins.ti === ti) S.ins = null;
+        render();
+        break;
+      case 'topUp':
+        swap(m.topicos, ti, ti - 1);
+        S.ins = null;
+        S.sel = '';
+        marcar();
+        render();
+        break;
+      case 'topDown':
+        swap(m.topicos, ti, ti + 1);
+        S.ins = null;
+        S.sel = '';
+        marcar();
+        render();
+        break;
+      case 'delTopico':
+        {
+          const alvo = S.msg,
+            parte = m.topicos.splice(ti, 1)[0];
+          S.ins = null;
+          S.sel = '';
+          marcar();
+          render();
+          toast("Parte \u201C" + (parte.titulo || 'Parte ' + (ti + 1)) + "\u201D exclu\xEDda", false, {
+            rotulo: 'Desfazer',
+            fn: () => {
+              if (S.msg !== alvo || S.view !== 'editor') return toast('Não dá mais para desfazer.', true);
+              parte._open = true;
+              alvo.topicos.splice(Math.min(ti, alvo.topicos.length), 0, parte);
+              marcar();
+              render();
+            }
+          });
+          break;
+        }
+      case 'inserir':
+        S.ins = S.ins && S.ins.ti === ti ? null : {
+          ti,
+          q: ''
+        };
+        atualizarPaleta(ti);
+        break;
+      case 'addBloco':
+        novoBloco(ti, el.dataset.v);
+        break;
+      case 'buscarVers':
+        buscarVers(B, el);
+        break;
+      case 'blUp':
+        swap(T.blocos, bi, bi - 1);
+        S.sel = ti + ':' + (bi - 1);
+        marcar();
+        render();
+        break;
+      case 'blDown':
+        swap(T.blocos, bi, bi + 1);
+        S.sel = ti + ':' + (bi + 1);
+        marcar();
+        render();
+        break;
+      case 'blDel':
+        {
+          const alvo = S.msg,
+            removido = T.blocos.splice(bi, 1)[0];
+          S.sel = '';
+          marcar();
+          render();
+          toast((TIPOS[removido.tipo] || TIPOS.texto).nome + " removido", false, {
+            rotulo: 'Desfazer',
+            fn: () => {
+              if (S.msg !== alvo || S.view !== 'editor' || alvo.topicos.indexOf(T) < 0) return toast('Não dá mais para desfazer.', true);
+              T.blocos.splice(Math.min(bi, T.blocos.length), 0, removido);
+              T._open = true;
+              S.sel = ti + ':' + bi;
+              marcar();
+              render();
+            }
+          });
+          break;
+        }
+      case 'addItem':
+        B.itens.push('');
+        marcar();
+        render();
+        focar(".bl[data-t=\"" + ti + "\"][data-b=\"" + bi + "\"] [data-li=\"" + (B.itens.length - 1) + "\"]");
+        break;
+      case 'delItem':
+        B.itens.splice(+el.dataset.li, 1);
+        marcar();
+        render();
+        break;
+
+      /* pregar */
+      case 'sairPregar':
+        sairPregar();
+        break;
+      case 'pgIr':
+        irTopico(+el.dataset.v);
+        break;
+      case 'fonte':
+        S.pr.fs = Math.max(0.7, Math.min(2.2, +(S.pr.fs + 0.15 * +el.dataset.v).toFixed(2)));
+        document.querySelector('.pg').style.setProperty('--fs', S.pr.fs);
+        break;
+      case 'timer':
+        if (S.pr.inicio) {
+          fecharParte();
+          S.pr.acum += Date.now() - S.pr.inicio;
+          S.pr.inicio = 0;
+        } else {
+          S.pr.inicio = Date.now();
+          S.pr.marca = S.pr.inicio;
+        }
+        tick();
+        break;
+    }
+  });
+
+  /* tocar num bloco o seleciona (no iPad os botões ficam escondidos até isso) */
+  app.addEventListener('click', e => {
+    const bl = e.target.closest && e.target.closest('.bl');
+    if (bl) selecionar(bl);
+  });
+  app.addEventListener('focusin', e => {
+    const bl = e.target.closest && e.target.closest('.bl');
+    if (bl) selecionar(bl);
+  });
+  app.addEventListener('input', e => {
+    const el = e.target,
+      f = el.dataset.f;
+    if (!f || f === 'arquivo') return;
+    if (f === 'filtro') {
+      S.filtro = el.value;
+      document.getElementById('res').innerHTML = vResultados();
+      return;
+    }
+    if (f === 'ins') {
+      const ti = +el.dataset.t;
+      if (el.value.startsWith('/')) S.ins = {
+        ti,
+        q: el.value.slice(1).trim()
+      };else if (S.ins && S.ins.ti === ti && S.ins.q) S.ins = null; // apagou a barra: fecha a paleta aberta pelo "/"
+      atualizarPaleta(ti);
+      return;
+    }
+    const m = S.msg;
+    if (f === 'tema' || f === 'pasta') m[f] = el.value;else if (f === 'tempo') m.tempo = +el.value;else if (f === 'titulo') m.topicos[+el.dataset.t].titulo = el.value;else if (f === 'ttempo') {
+      const t = m.topicos[+el.dataset.t],
+        v = Math.round(+el.value);
+      if (v > 0) t.tempo = v;else delete t.tempo;
+    } else {
+      const bl = el.closest('.bl');
+      if (!bl) return;
+      const b = m.topicos[+bl.dataset.t].blocos[+bl.dataset.b];
+      if (f === 'item') b.itens[+el.dataset.li] = el.value;else b[f] = el.value;
+    }
+    if (el.tagName === 'TEXTAREA') autosize(el);
+    marcar();
+  });
+  app.addEventListener('keydown', e => {
+    const el = e.target,
+      f = el.dataset && el.dataset.f;
+    /* o tema é uma linha só, mesmo sendo textarea */
+    if (f === 'tema' && e.key === 'Enter') {
+      e.preventDefault();
+      el.blur();
+      return;
+    }
+    /* Enter na referência ou na versão de um Versículo busca o texto */
+    if ((f === 'ref' || f === 'versao') && e.key === 'Enter') {
+      e.preventDefault();
+      const bl = el.closest('.bl');
+      buscarVers(S.msg.topicos[+bl.dataset.t].blocos[+bl.dataset.b], bl.querySelector('[data-a="buscarVers"]'));
+      return;
+    }
+    /* campo "Escreva aqui ou digite /": Enter cria o bloco */
+    if (f === 'ins') {
+      const ti = +el.dataset.t,
+        v = el.value;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (v.startsWith('/')) {
+          const k = tiposFiltrados(v.slice(1).trim())[0];
+          if (k) novoBloco(ti, k);
+        } else if (v.trim()) novoBloco(ti, 'texto', v.trim());else if (S.ins && S.ins.ti === ti) {
+          const k = tiposFiltrados(S.ins.q)[0];
+          if (k) novoBloco(ti, k);
+        }
+      } else if (e.key === 'Escape' && S.ins) {
+        e.stopPropagation();
+        S.ins = null;
+        el.value = '';
+        atualizarPaleta(ti);
+      }
+      return;
+    }
+    /* Enter numa lista cria o próximo item; Backspace num item vazio apaga */
+    if (f === 'item') {
+      const bl = el.closest('.bl'),
+        ti = +bl.dataset.t,
+        bi = +bl.dataset.b,
+        li = +el.dataset.li;
+      const b = S.msg.topicos[ti].blocos[bi];
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        b.itens.splice(li + 1, 0, '');
+        marcar();
+        render();
+        focar(".bl[data-t=\"" + ti + "\"][data-b=\"" + bi + "\"] [data-li=\"" + (li + 1) + "\"]");
+      } else if (e.key === 'Backspace' && el.value === '' && b.itens.length > 1) {
+        e.preventDefault();
+        b.itens.splice(li, 1);
+        marcar();
+        render();
+        focar(".bl[data-t=\"" + ti + "\"][data-b=\"" + bi + "\"] [data-li=\"" + Math.max(0, li - 1) + "\"]");
+      }
+    }
+  });
+  app.addEventListener('change', async e => {
+    const el = e.target;
+    if (el.dataset.f !== 'arquivo' || !el.files[0]) return;
+    const bl = el.closest('.bl'),
+      b = S.msg.topicos[+bl.dataset.t].blocos[+bl.dataset.b];
+    try {
+      toast('Enviando imagem…');
+      const dataUrl = await reduzirImagem(el.files[0]);
+      b.url = await run('enviarImagem', dataUrl, el.files[0].name.replace(/\.\w+$/, '') + '.jpg');
+      marcar();
+      render();
+      toast('Imagem enviada');
+    } catch (err) {
+      falha(err);
+    }
+  });
+  function reduzirImagem(file) {
+    return new Promise((ok, fail) => {
+      const r = new FileReader();
+      r.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+          const c = document.createElement('canvas');
+          c.width = Math.round(img.width * k);
+          c.height = Math.round(img.height * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          ok(c.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = () => fail(new Error('Não foi possível ler a imagem.'));
+        img.src = r.result;
+      };
+      r.onerror = () => fail(new Error('Não foi possível ler o arquivo.'));
+      r.readAsDataURL(file);
+    });
+  }
+
+  /* atalhos de teclado */
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && S.view === 'editor') {
+      e.preventDefault();
+      salvar();
+    }
+    if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('card') && e.target.dataset.a === 'abrir') abrir(e.target.dataset.id);
+    if (S.view === 'pregar') {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') irTopico(S.pr.i + 1);
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') irTopico(S.pr.i - 1);
+      if (e.key === 'Escape') sairPregar();
+    }
+    if (e.key === 'Escape' && S.modal) {
+      S.modal = null;
+      render();
+    } else if (e.key === 'Escape' && S.ins) {
+      const ti = S.ins.ti;
+      S.ins = null;
+      atualizarPaleta(ti);
+    }
+  });
+
+  /* deslizar para trocar de parte no modo Pregar */
+  let toqueX = null,
+    toqueY = null;
+  app.addEventListener('touchstart', e => {
+    if (S.view === 'pregar') {
+      toqueX = e.touches[0].clientX;
+      toqueY = e.touches[0].clientY;
+    }
+  }, {
+    passive: true
+  });
+  app.addEventListener('touchend', e => {
+    if (S.view !== 'pregar' || toqueX === null) return;
+    const dx = e.changedTouches[0].clientX - toqueX,
+      dy = e.changedTouches[0].clientY - toqueY;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) irTopico(S.pr.i + (dx < 0 ? 1 : -1));
+    toqueX = null;
+  });
+
+  /* ao sair do app (trocar de aba, bloquear o iPad): salva já; ao voltar ao Pregar: pede a tela acesa de novo */
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && S.msg && S.view !== 'lista' && S.dirty) {
+      guardarMsg(S.msg);
+      marcarPendente(chaveMsg(S.msg), true);
+      salvar(true);
+    }
+    if (document.visibilityState === 'visible') {
+      if (S.view === 'pregar') manterTela();
+      sincronizar();
+    }
+  });
+  /* ao fechar: a cópia no aparelho já basta (é enviada na próxima abertura); sem aviso de "sair da página" */
+  window.addEventListener('pagehide', () => {
+    if (S.msg && S.view !== 'lista' && S.dirty) {
+      guardarMsg(S.msg);
+      marcarPendente(chaveMsg(S.msg), true);
+    }
+  });
+  window.addEventListener('online', () => {
+    S.offline = false;
+    sincronizar();
+    if (S.view === 'lista') carregarLista();
+  });
+  window.addEventListener('offline', () => {
+    S.offline = true;
+    if (S.view === 'lista') render();
+  });
+
+  /* app instalável e com cópia das telas no aparelho (só em https: no GitHub Pages) */
+  function registrarSW() {
+    try {
+      if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+    } catch (e) {}
+  }
+  registrarSW();
+  if (!CFG.api || !CFG.client) mostrarConfig();else carregarLista().then(sincronizar);
+})();
+</script>
+</body>
+</html>
