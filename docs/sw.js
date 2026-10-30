@@ -2,7 +2,7 @@
  * Os dados (sermões) NÃO passam por aqui: ficam no localStorage da página e no servidor.
  * VERSAO é trocada pelo build a cada publicação, o que descarta as cópias antigas.
  */
-var VERSAO = '7afda7811a';
+var VERSAO = '39bd9cf0c6';
 var CACHE_APP = 'sermoes-app-' + VERSAO;
 var CACHE_FONTES = 'sermoes-fontes';
 var ARQUIVOS = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];

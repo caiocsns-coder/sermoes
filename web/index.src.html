@@ -381,7 +381,10 @@ function guardarMsg(m) {
 }
 
 /* ======================= servidor (Apps Script) e login ======================= */
-const erroRede = () => Object.assign(new Error('Sem conexão com o servidor.'), { rede: true });
+/* sem internet ou servidor inacessível (implantação antiga, acesso diferente de "Qualquer pessoa") */
+const erroRede = () => Object.assign(new Error(navigator.onLine === false
+  ? 'Sem internet.'
+  : 'Não consegui falar com o servidor. Se a internet está funcionando, confira no Apps Script se a implantação está na versão nova, com acesso "Qualquer pessoa".'), { rede: true });
 
 async function chamar(fn, args, cred) {
   if (!CFG.api) throw new Error('Configuração pendente: falta o endereço da API em config.json.');
