@@ -1,0 +1,29 @@
+/* editor */
+.ed{max-width:1060px;margin:0 auto;padding:12px 48px 160px}
+.tema{display:block;width:100%;padding:0;background:none;border:0;outline:0;resize:none;overflow:hidden;font-family:var(--fd);font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
+.tema::placeholder{color:var(--s3)}
+.pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.tl{display:flex;gap:4px;height:34px;margin-top:28px}
+.tl button{min-width:28px;padding:0 10px;border-radius:8px;background:var(--s2);color:var(--mu);font-size:13px;font-weight:700;text-align:left;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tl button.on{background:var(--ac);color:var(--acx)}
+.tlcap{font-size:14px;color:var(--mu);margin-top:8px}
+.tlcap .warn,.pmeta .warn{color:var(--warn)}
+.pmeta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:-6px}
+.pill.sm{height:34px;padding:0 12px;font-size:14px;gap:6px}
+.pill input[type=number]{width:2.6em;text-align:right;-moz-appearance:textfield}
+.pill input[type=number]::-webkit-inner-spin-button,.pill input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.pill input::placeholder{color:var(--mu)}
+.partes{display:grid;grid-template-columns:48px minmax(0,1fr);column-gap:18px;margin-top:34px}
+.no{display:flex;flex-direction:column;align-items:center}
+.no b{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--s3);color:var(--mu);font-size:14px;display:flex;align-items:center;justify-content:center}
+.no.on b{background:var(--ac);border-color:var(--ac);color:var(--acx)}
+.no.add b{border-style:dashed;color:var(--ac)}
+.no i{flex:1;width:2px;margin:4px 0;background:var(--bd)}
+.pt{padding-bottom:26px;min-width:0}
+.tt{display:flex;align-items:center;gap:12px;min-height:34px;font-size:20px;text-align:left;max-width:100%}
+.tt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tt small{flex:none;font-size:14px;color:var(--mu)}
+.po{display:flex;flex-direction:column;gap:18px;padding-bottom:34px;min-width:0}
+.ph{display:flex;align-items:center;gap:2px;min-height:34px}
+.ph input{flex:1;min-width:0;height:36px;padding:0;background:none;border:0;outline:0;font-family:var(--fd);font-size:28px;font-weight:600;letter-spacing:-.02em}
+.ph input:focus{box-shadow:0 2px 0 var(--ac)}

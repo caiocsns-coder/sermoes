@@ -1,0 +1,34 @@
+@media (max-width:760px){
+  .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px}
+  .status{display:none}
+  .lhead{padding:calc(24px + env(safe-area-inset-top)) 16px 8px}
+  .logo{font-size:38px}
+  .busca{order:3;width:100%}
+  .aviso{margin:4px 16px 0}
+  .lhead .lg{display:none}
+  .lhead .btn{padding:0 14px}
+  .lhead .imp{width:46px;padding:0;justify-content:center}
+  .lhead{gap:8px}
+  .lhead .logo{font-size:32px}
+  .wrap{padding:8px 16px 120px}
+  .feat{padding:20px}
+  .feat .ft{font-size:26px;padding-right:80px}
+  .ed{padding:8px 16px 140px}
+  .tema{font-size:32px}
+  .partes{grid-template-columns:30px minmax(0,1fr);column-gap:12px}
+  .no b{width:28px;height:28px;font-size:13px}
+  .ph input{font-size:22px}
+  .ref input.ver{width:46px}
+  .pgnav{flex-wrap:wrap;gap:8px 10px}
+  .tparte{order:9;flex-basis:100%;font-size:13px}
+  .timer small{font-size:13px}
+  .pgbar{padding:calc(12px + env(safe-area-inset-top)) 14px 12px}
+  .pgbar:has(.telec) .pgtema,.pgbar:has(.hlimpar) .pgtema{display:none}
+  .telec{margin-right:auto;border-right:0;padding-right:0}
+  .pgc{font-size:calc(21px*var(--fs))}
+  .pgf{padding:14px}
+  .seg button{font-size:0;padding:0}
+  .timer b{font-size:30px}
+  .nx span{display:none}
+  .nx{padding:0 18px}
+}

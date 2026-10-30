@@ -21,7 +21,7 @@ A ideia inicial veio de um app de mercado (o "IDE APP"). Em out/2026 a interface
 
 O uso principal é no **iPad**, instalado na Tela de Início, e no Chrome do desktop. O dono é um único usuário, e não existe multiusuário: só a conta Google dona do script entra.
 
-O primeiro conteúdo carregado é o sermão **"Servindo em Sua Casa até que Ele Venha"** (174 anos da Escola Sabatina, out/2026), via `src/Seed.gs`. Outros sermões entram pelo botão **Importar** da lista, com um arquivo `.sermao.json` (ver "Arquivo .sermao.json"), que é o que a skill `exportar-sermao-app` gera.
+O primeiro conteúdo carregado é o sermão **"Servindo em Sua Casa até que Ele Venha"** (174 anos da Escola Sabatina, out/2026), via `servidor/Seed.gs`. Outros sermões entram pelo botão **Importar** da lista, com um arquivo `.sermao.json` (ver "Arquivo .sermao.json"), que é o que a skill `exportar-sermao-app` gera.
 
 ## Estrutura
 
@@ -30,24 +30,69 @@ sermoes/                      (repositório do GitHub)
 ├─ CONTEXT.md                 ← este arquivo
 ├─ README.md                  ← passo a passo de publicação
 ├─ config.json                ← apiUrl (link /exec) e googleClientId; não são segredos
-├─ package.json               ← npm run setup | build | test
-├─ src/                       ← o que vai para o Apps Script (colar no editor)
-│  ├─ Code.gs                 ← servidor: doPost (API), login, sessões, planilha, Agenda, Drive, YouVersion
+├─ package.json               ← npm run setup | build | test | test:servidor | test:pagina
+├─ servidor/                  ← FONTE do servidor, um arquivo por assunto
+│  ├─ 01-config.gs            ← cabeçalho e constantes da planilha
+│  ├─ 02-api.gs               ← doGet e doPost (porta de entrada, lista branca API)
+│  ├─ 03-login.gs             ← sessões, código de pareamento, verificarLogin_
+│  ├─ 04-planilha.gs          ← aba_, linhas_, linhaDoId_, limite da célula
+│  ├─ 05-sermoes.gs           ← listar, obter, salvar (conflito), excluir, duplicar
+│  ├─ 06-historico.gs         ← versões e lixeira (aba Historico)
+│  ├─ 07-backup.gs            ← backup semanal no Drive
+│  ├─ 08-agenda.gs            ← listarEventos
+│  ├─ 09-biblia.gs            ← YouVersion
+│  ├─ 10-holyrics.gs          ← projeção e telão de retorno
+│  ├─ 11-imagens.gs           ← enviarImagem
 │  ├─ Seed.gs                 ← importarSermao174(): carrega o sermão de exemplo
 │  └─ appsscript.json         ← manifesto (fuso SP, V8, webapp "Qualquer pessoa")
+├─ apps-script/               ← GERADO pelo build: o que se cola no editor do Apps Script
+│  ├─ Code.gs                 ← servidor/NN-*.gs juntos, na ordem dos números
+│  ├─ Seed.gs                 ← cópia
+│  └─ appsscript.json         ← cópia
 ├─ web/                       ← FONTE da página
-│  ├─ index.src.html          ← interface (pode usar template literals; o build converte)
+│  ├─ index.html              ← casca: <head>, o <script> que mostra erros e os marcadores /*@@CSS@@*/ e /*@@JS@@*/
+│  ├─ css/NN-*.css            ← estilos por tela (base, botões, lista, editor, blocos, inserir, modal, aviso, pregar, entrada, celular)
+│  ├─ js/*.js                 ← módulos ES (import/export), um por assunto; main.js é a entrada
 │  ├─ sw.js                   ← service worker: cópia das telas para abrir sem internet
 │  ├─ manifest.webmanifest    ← app instalável
 │  └─ icons/                  ← ícones (192, 512, 512 maskable, apple-touch 180)
 ├─ docs/                      ← GERADO pelo build; é a pasta que o GitHub Pages publica
+├─ .github/workflows/testes.yml ← o GitHub roda npm test a cada envio e confere se docs/ e apps-script/ foram gerados
 └─ tools/
-   ├─ build.js                ← gera docs/: Babel (sem template literals) + config + versão do sw.js
-   ├─ mock-server.js          ← API simulada (mesmas regras do Code.gs)
+   ├─ build.js                ← gera docs/ (esbuild junta os módulos, Babel tira os template literals, IIFE, config, versão do sw.js) e apps-script/
+   ├─ test-servidor.js        ← testes do Code.gs gerado (login, pareamento, conflito, histórico, backup, YouVersion, Holyrics)
+   ├─ apps-script-falso.js    ← Apps Script simulado em Node (propriedades, cache, planilha, Drive, rede, relógio)
+   ├─ mock-server.js          ← API simulada para o teste da página (mesmas regras do Code.gs)
    └─ test.js                 ← teste de ponta a ponta no Chromium (Playwright)
 ```
 
-No editor do Apps Script ficam só **Código.gs** (ou Code.gs) e **Seed.gs**. O arquivo **Index** foi apagado na troca de 30/out/2026.
+No editor do Apps Script ficam só **Código.gs** (ou Code.gs) e **Seed.gs**, com o conteúdo de `apps-script/`. O arquivo **Index** foi apagado na troca de 30/out/2026. `docs/` e `apps-script/` são gerados: nunca edite lá.
+
+### Módulos da página (`web/js/`)
+
+| Módulo | Conteúdo |
+|---|---|
+| `main.js` | entrada: importa `acoes` e `eventos` (liga os eventos) e inicia o app |
+| `estado.js` | `S` (estado único) e `app` (#app) |
+| `modelo.js` | `TEMPOS`, `VERSOES`, `TIPOS`, `LIMITE`, `novaMsg`, `tele` |
+| `config.js` | `CFG` lido das `<meta>` |
+| `util.js` | escape, datas, `toast`, `falha`, `desfazer` |
+| `icones.js` | `ICON`, `ic` |
+| `armazenamento.js` | `local` (localStorage em try/catch), cópias, pendências, poda |
+| `servidor.js` | `run`/`chamar`, login com Google, código de pareamento |
+| `dados.js` | carregar, abrir, salvar automático, conflito, `sincronizar` |
+| `render.js` | `render()` escolhe a tela |
+| `lista.js`, `editor.js`, `pregar.js`, `modais.js` | as telas |
+| `tempo.js` | tempo por parte e ritmo pessoal |
+| `citacoes.js` | citações de Ellen White (colagem, conferida) |
+| `biblia.js` | `buscarVers` (YouVersion) |
+| `teleprompter.js`, `holyrics.js` | rolagem automática e projeção |
+| `arquivo.js` | importar/exportar `.sermao.json` |
+| `imagens.js` | redução de imagens antes do envio |
+| `acoes.js` | o `switch` de cliques em `[data-a]` |
+| `eventos.js` | digitação, teclado, toque, colar, ciclo de vida, service worker |
+
+Um módulo não pode atribuir a uma variável `let` de outro (o esbuild recusa): quem precisa mudar o valor chama uma função exportada pelo dono (ex.: `desfazer()` em `util.js`, `desistirLogin()` em `servidor.js`).
 
 ## Arquitetura (GitHub Pages + API no Apps Script)
 
@@ -80,10 +125,10 @@ No editor do Apps Script ficam só **Código.gs** (ou Code.gs) e **Seed.gs**. O 
 
 ## Regras do código
 
-1. **Template literals:** o build converte crases e `${}` em concatenação (`docs/index.html` sai sem nenhuma). Isso deixou de ser obrigatório fora do HtmlService, mas foi mantido como regra do projeto. Edite sempre `web/index.src.html` e rode `npm run build`; o teste falha se sobrar crase.
-2. **Nada de globais soltas.** Todo o JavaScript da página fica dentro de uma IIFE com `'use strict'`. A configuração entra por `<meta name="sermoes:api">` e `<meta name="sermoes:client">`, não por variáveis globais.
-3. **Mostrar erros na tela.** O primeiro `<script>` captura `error` e `unhandledrejection` e mostra uma faixa vermelha com a mensagem. Esse bloco nunca deve ser removido; o teste verifica que ele existe.
-4. **Implantações do Apps Script são congeladas.** Depois de mudar o `Code.gs`, use **Gerenciar implantações → lápis → Nova versão**, mantendo "Qualquer pessoa". O link `/exec` continua o mesmo, então o `config.json` não muda.
+1. **Template literals:** edite sempre as fontes (`web/js`, `web/css`, `web/index.html`, `servidor/`) e rode `npm run build`. Nos módulos da página pode usar crases; o build converte em concatenação e **falha** se sobrar crase ou `${` no `docs/index.html`. No servidor, escreva concatenação (o `test-servidor` falha se o `Code.gs` tiver crase).
+2. **Nada de globais soltas.** Os módulos usam `import`/`export`; o build junta tudo dentro de uma IIFE com `'use strict'` (o `docs/index.html` não tem nenhuma variável global do app). A configuração entra por `<meta name="sermoes:api">` e `<meta name="sermoes:client">`.
+3. **Mostrar erros na tela.** O primeiro `<script>` (fica na casca `web/index.html`) captura `error` e `unhandledrejection` e mostra uma faixa vermelha com a mensagem. Esse bloco nunca deve ser removido; o build e o teste verificam que ele existe.
+4. **Implantações do Apps Script são congeladas.** Depois de mudar o servidor, cole o `apps-script/Code.gs` e use **Gerenciar implantações → lápis → Nova versão**, mantendo "Qualquer pessoa". O link `/exec` continua o mesmo, então o `config.json` não muda.
 5. **Datas trafegam como string ISO** entre servidor e página.
 6. **`localStorage` sempre em `try/catch`** (objeto `local`), porque pode falhar em navegação privada ou com o espaço cheio.
 
@@ -140,10 +185,10 @@ Bloco =
 
 Na interface, `Mensagem` aparece como **Sermão** e `topicos` como **Partes**. Os nomes no código e na planilha não mudaram.
 
-Para criar um tipo de bloco novo, é preciso mexer em três lugares do `web/index.src.html`:
-- a entrada no objeto `TIPOS` (nome, `atalho` de uma letra para a paleta, ícone e `novo()`). A ordem das chaves define a ordem da paleta "Inserir";
-- um `case` em `vBloco()`, para a edição;
-- um `case` em `vLeitura()`, para o modo Pregar.
+Para criar um tipo de bloco novo, é preciso mexer em três lugares:
+- a entrada no objeto `TIPOS` (`web/js/modelo.js`) (nome, `atalho` de uma letra para a paleta, ícone e `novo()`). A ordem das chaves define a ordem da paleta "Inserir";
+- um `case` em `vBloco()` (`editor.js`), para a edição;
+- um `case` em `vLeitura()` (`pregar.js`), para o modo Pregar.
 
 ## Armazenamento atual
 
@@ -176,7 +221,7 @@ Os dados ficam numa **planilha do Google**, na aba `Mensagens`, com uma linha po
 A opção recomendada é guardar **um arquivo `.json` por sermão** numa pasta "Sermões" do Drive.
 - **Vantagens:** acaba o limite de 50 mil caracteres, cada sermão vira um arquivo que dá para copiar ou compartilhar, e o backup vem com o Drive.
 - **Custo:** a listagem fica mais lenta com muitos arquivos. A solução é manter um índice leve num arquivo `_index.json` ou no `CacheService`.
-- **Impacto:** a troca é **só no `Code.gs`**. Basta manter as mesmas assinaturas da API abaixo, e o `Index` não muda.
+- **Impacto:** a troca é **só no servidor** (`servidor/04-planilha.gs` e `05-sermoes.gs`). Basta manter as mesmas assinaturas da API abaixo, e a página não muda.
 - **Alternativas descartadas:**
   - PropertiesService: o limite de cerca de 9 KB por valor é pequeno demais para um sermão.
   - Google Docs como banco: o formato é frágil.
@@ -224,7 +269,7 @@ Formato de troca de sermões entre o app, backups e o Claude (skill `exportar-se
   - o sermão abre no editor como novo (`_local`) e é salvo pelo salvamento automático, inclusive sem internet;
   - o aviso final conta os versículos sem texto, para tocar em **Buscar**.
 
-## API do servidor (`Code.gs`)
+## API do servidor (`servidor/`, gerado em `apps-script/Code.gs`)
 
 Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodadas direto no editor do Apps Script.
 
@@ -275,7 +320,7 @@ Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodada
 - **Interface:** no bloco Versículo, o botão "Buscar" (ou Enter na referência ou na versão) preenche o texto, que continua editável. O campo Versão sugere NBV, NVI, NVI 2011, BLT, OL, ARA e NAA (`<datalist id="versoes">`); se ficar vazio, usa NBV. Antes de substituir um texto já escrito, o app pede confirmação. O copyright aparece embaixo do versículo no editor e no modo Pregar.
 - **Licença:** respeitar os termos do YouVersion e de cada editora, sempre com atribuição. O texto buscado fica salvo dentro do sermão, na planilha.
 
-## Interface (`web/index.src.html`)
+## Interface (`web/`)
 
 - **Base:** JavaScript puro, sem framework. Tem um estado único `S` com:
   - `view` (`lista`, `editor` ou `pregar`);
@@ -365,27 +410,29 @@ Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodada
 ## Fluxo de trabalho
 
 ```bash
-npm run setup               # uma vez: Babel + Playwright 1.56.1 (versão fixa) + o Chromium dele
-# editar web/index.src.html e/ou src/Code.gs
-npm run build               # gera docs/ (página sem template literals, config preenchida, nova versão do sw.js)
-npm test                    # build + teste de ponta a ponta no Chromium, com API e login simulados;
+npm run setup               # uma vez: esbuild, Babel, Playwright 1.56.1 (versão fixa) + o Chromium dele
+# editar web/js, web/css, web/index.html e/ou servidor/
+npm run build               # gera docs/ (um index.html, sem template literals, config preenchida, nova versão do sw.js) e apps-script/
+npm run test:servidor       # build + testes do Code.gs num Apps Script simulado (44 casos)
+npm test                    # build + testes do servidor + teste de ponta a ponta no Chromium, com API e login simulados;
                             # cobre: login, código de pareamento, inserir blocos (3 jeitos), citações de Ellen White, busca de versículo, seleção, desfazer,
                             # tempo por parte, salvamento automático, conflito, sessão vencida,
                             # busca na lista, importar/exportar .sermao.json, versões, lixeira, backup,
                             # relatório da pregação, teleprompter, Holyrics (projetar e telão),
                             # modo sem internet (editar, criar e sincronizar) e Pregar
-git add -A && git commit -m "…" && git push   # o GitHub Pages publica docs/ em cerca de 1 minuto
+git add -A && git commit -m "…" && git push   # o GitHub Pages publica docs/ em cerca de 1 minuto;
+                                               # o GitHub Actions roda npm test e confere docs/ e apps-script/
 ```
 
 - **Mudou a página:** build, teste e push. No iPad, a versão nova aparece ao abrir o app com internet (o service worker busca a página na rede primeiro).
-- **Mudou o `Code.gs`:** cole no editor do Apps Script e crie uma **Nova versão** da implantação. O link `/exec` não muda.
+- **Mudou o servidor (`servidor/`):** cole o `apps-script/Code.gs` no editor do Apps Script e crie uma **Nova versão** da implantação. O link `/exec` não muda.
 
-**Opcional:** usar o [`clasp`](https://github.com/google/clasp) para sincronizar `src/` com o projeto Apps Script pela linha de comando (`clasp push`), com `rootDir: "src"`.
+**Opcional:** usar o [`clasp`](https://github.com/google/clasp) para sincronizar `apps-script/` com o projeto Apps Script pela linha de comando (`clasp push`), com `rootDir: "apps-script"`.
 
 ## Instalação do zero
 
 O passo a passo completo, com prints do que procurar, está no `README.md`. Resumo:
-1. **Apps Script:** crie uma planilha, abra **Extensões → Apps Script**, cole `Code.gs`, `Seed.gs` e o manifesto `appsscript.json`, e execute `importarSermao174` uma vez para autorizar.
+1. **Apps Script:** crie uma planilha, abra **Extensões → Apps Script**, cole os três arquivos de `apps-script/` (`Code.gs`, `Seed.gs` e o manifesto `appsscript.json`), e execute `importarSermao174` uma vez para autorizar.
 2. **Google Cloud:** crie um ID do cliente OAuth do tipo **Aplicativo da Web**, com a origem JavaScript `https://<usuário>.github.io`.
 3. **Propriedades do script:** `GOOGLE_CLIENT_ID`, `YOUVERSION_KEY` e, se quiser, `DONO_EMAIL` e `APP_URL`.
 4. **Implantação:** App da Web, "Executar como: eu" e "Quem pode acessar: Qualquer pessoa". Copie o link `/exec`.

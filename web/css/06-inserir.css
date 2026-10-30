@@ -1,0 +1,12 @@
+/* inserir bloco */
+.ins{display:flex;align-items:center;gap:8px}
+.ins input{flex:1;min-width:0;height:48px;padding:0 16px;border-radius:12px;border:1px dashed var(--s3);background:none;outline:0;font-size:17px}
+.ins input:focus{border:1px solid var(--ac)}
+.ins input::placeholder{color:var(--mu)}
+.pal{width:340px;max-width:100%;display:flex;flex-direction:column;padding:6px;margin-top:8px;border-radius:14px;background:var(--s2);border:1px solid var(--s3)}
+.pal button{display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;border-radius:10px;font-size:16px;text-align:left}
+.pal button span{flex:1}
+.pal button small{color:var(--mu);font-size:13px}
+.pal button.on,.pal button:hover{background:var(--acd)}
+.pal p{margin:0;padding:10px 12px;color:var(--mu);font-size:15px}
+.pfoot{display:flex;justify-content:flex-end}

@@ -1,0 +1,15 @@
+/* Identidade "Linha do tempo": grafite-violeta, acento azul-céu */
+:root{
+  --bg:#131218;--bg2:#0f0e13;--s1:#1c1b23;--s2:#25232e;--s3:#3b3848;--bd:#2f2c3a;
+  --tx:#efecf5;--mu:#a19bb0;--ac:#82b8ff;--ac2:#5d8fd6;--acd:#17223a;--acx:#0b1830;--feito:#3b4f73;
+  --warn:#ffb86b;--dan:#ff6b5b;
+  --fd:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --fb:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--fb);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0}
+input,textarea,select{font:inherit;color:var(--tx)}
+svg{flex:none}
+.sp{flex:1}
+.muted{color:var(--mu)}

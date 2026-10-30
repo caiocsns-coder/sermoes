@@ -1,0 +1,21 @@
+# Roda o build e todos os testes (servidor e página) a cada envio.
+# Também confere se docs/ e apps-script/ foram gerados e enviados junto com a mudança.
+name: testes
+on:
+  push:
+  pull_request:
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - name: docs/ e apps-script/ estão atualizados
+        run: git diff --exit-code -- docs apps-script || (echo "::error::Rode npm run build e envie docs/ e apps-script/ junto com a mudança." && exit 1)

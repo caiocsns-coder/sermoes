@@ -3,7 +3,7 @@
  * Imagens dos sermões são guardadas (até 60) para o modo Pregar sem internet.
  * VERSAO é trocada pelo build a cada publicação, o que descarta as cópias antigas.
  */
-var VERSAO = '42db5005e6';
+var VERSAO = 'dedbe90a2e';
 var CACHE_APP = 'sermoes-app-' + VERSAO;
 var CACHE_FONTES = 'sermoes-fontes';
 var CACHE_IMG = 'sermoes-imagens';

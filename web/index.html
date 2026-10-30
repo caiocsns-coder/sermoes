@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sermões</title>
+<meta name="theme-color" content="#131218">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sermões">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- preenchidos pelo build a partir de config.json (não são segredos) -->
+<meta name="sermoes:api" content="{{API_URL}}">
+<meta name="sermoes:client" content="{{GOOGLE_CLIENT_ID}}">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/*@@CSS@@*/
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"></div>
+<div id="toast"></div>
+<div id="login" role="dialog" aria-modal="true" aria-label="Entrar"></div>
+
+<script>
+/* Mostra qualquer erro na tela em vez de deixar a página em branco */
+(function () {
+  function mostrar(msg) {
+    var d = document.getElementById('erro-fatal');
+    if (!d) {
+      d = document.createElement('div'); d.id = 'erro-fatal';
+      d.style.cssText = 'position:fixed;left:16px;right:16px;top:16px;z-index:99;padding:16px 18px;border-radius:12px;background:#5a1d18;color:#fff;font:15px/1.5 system-ui,sans-serif;white-space:pre-wrap';
+      (document.body || document.documentElement).appendChild(d);
+    }
+    d.textContent = 'Erro no app: ' + msg + '\n\nTire um print desta mensagem.';
+  }
+  window.addEventListener('error', function (e) { mostrar(e.message + (e.lineno ? ' (linha ' + e.lineno + ')' : '')); });
+  window.addEventListener('unhandledrejection', function (e) { mostrar((e.reason && e.reason.message) || String(e.reason)); });
+})();
+</script>
+
+<script>
+/*@@JS@@*/
+</script>
+</body>
+</html>

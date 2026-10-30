@@ -1,5 +1,5 @@
 // Teste de fumaça: abre docs/index.html como se estivesse no GitHub Pages (https://app.test/),
-// com a API simulada (tools/mock-server.js + src/Seed.gs) e o login do Google simulado.
+// com a API simulada (tools/mock-server.js + servidor/Seed.gs) e o login do Google simulado.
 // Cobre: login, código de pareamento (app instalado), inserir blocos, citações de Ellen White, busca de versículo, seleção, desfazer, tempo por parte,
 // salvamento automático, conflito, sessão vencida, busca na lista, importar/exportar, modo sem internet, Pregar e Holyrics.
 const fs = require('fs'), path = require('path');
@@ -20,7 +20,7 @@ const GIS_FALSO = `window.google={accounts:{id:{
   renderButton:function(el){el.innerHTML='<button id="gtest">Entrar com Google (teste)</button>';el.firstChild.onclick=function(){window.__gcb({credential:'id-token-teste'});};}
 }}};`;
 
-const srv = criarServidor(fs.readFileSync(path.join(root, 'src/Seed.gs'), 'utf8'));
+const srv = criarServidor(fs.readFileSync(path.join(root, 'servidor/Seed.gs'), 'utf8'));
 const ESPERA = 3300;
 /* avança a hora da página e confere (o fastForward do Playwright às vezes é ignorado logo depois de um runFor) */
 const avancar = async (pg, ms) => {

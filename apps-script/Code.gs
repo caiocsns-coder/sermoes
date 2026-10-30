@@ -1,3 +1,4 @@
+// GERADO por npm run build a partir de servidor/ (11 arquivos). Não edite aqui: edite servidor/ e rode o build.
 /**
  * Sermões · servidor (Google Apps Script), usado como API pela página no GitHub Pages.
  *

@@ -6,6 +6,8 @@ App pessoal para escrever, organizar e pregar sermões.
 
 Detalhes de arquitetura, dados e decisões: [`CONTEXT.md`](CONTEXT.md).
 
+Código: a página fica em `web/` (módulos em `web/js` e estilos em `web/css`) e o servidor em `servidor/`. O `npm run build` gera `docs/` (publicada pelo GitHub Pages) e `apps-script/` (o que se cola no Apps Script).
+
 ## Publicar (primeira vez)
 
 Troque `USUARIO` pelo seu usuário do GitHub e `sermoes` pelo nome do repositório, se for outro.
@@ -25,8 +27,8 @@ Troque `USUARIO` pelo seu usuário do GitHub e `sermoes` pelo nome do repositór
 5. Copie o **ID do cliente**, que termina em `.apps.googleusercontent.com`. Não é preciso a chave secreta.
 
 ### 2. Apps Script: virar API
-1. No editor do Apps Script, substitua o **Código.gs** pelo `src/Code.gs` e **apague o arquivo Index**.
-2. Em **Configurações do projeto**, marque "Mostrar o arquivo de manifesto appsscript.json", abra o `appsscript.json` e cole o `src/appsscript.json`.
+1. No editor do Apps Script, substitua o **Código.gs** pelo `apps-script/Code.gs` e **apague o arquivo Index**.
+2. Em **Configurações do projeto**, marque "Mostrar o arquivo de manifesto appsscript.json", abra o `appsscript.json` e cole o `apps-script/appsscript.json`.
 3. Ainda em **Configurações do projeto → Propriedades do script**, adicione:
    - `GOOGLE_CLIENT_ID`: o ID copiado no passo 1;
    - `APP_URL`: `https://USUARIO.github.io/sermoes/`;
@@ -58,8 +60,9 @@ Troque `USUARIO` pelo seu usuário do GitHub e `sermoes` pelo nome do repositór
 6. Abra uma vez cada sermão que quiser ter disponível sem internet.
 
 ## Dia a dia
-- **Mudou a página** (`web/`): `npm test` e depois `git push`. A versão nova chega ao iPad na próxima vez que o app abrir com internet.
-- **Mudou o servidor** (`src/Code.gs`): cole no Apps Script e crie uma **Nova versão** da implantação.
+- **Mudou a página** (`web/js`, `web/css` ou `web/index.html`): `npm test` e depois `git push`. A versão nova chega ao iPad na próxima vez que o app abrir com internet.
+- **Mudou o servidor** (`servidor/`): `npm test`, depois cole o `apps-script/Code.gs` (gerado pelo build) no Apps Script e crie uma **Nova versão** da implantação.
+- **Testes no GitHub:** a cada `git push`, a aba **Actions** do repositório roda todos os testes. Um ✗ vermelho avisa se algo quebrou ou se faltou rodar o build.
 - **Importar um sermão escrito com o Claude:** baixe o `.sermao.json` gerado pela skill `exportar-sermao-app` e toque em **Importar** na lista do app.
 - **Backup ou compartilhar um sermão:** no editor, toque no ícone de download. No iPad abre a folha de compartilhamento (Salvar em Arquivos, AirDrop…).
 - **Backup automático:** execute `instalarBackupSemanal` uma vez no editor do Apps Script. Toda segunda às 4h, cada sermão vira um `.sermao.json` em "Sermões · backups" no Drive (ficam as 8 últimas semanas). Para restaurar um, importe o arquivo pelo app.
