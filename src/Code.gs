@@ -30,6 +30,8 @@ function doGet() {
 /**
  * Corpo (texto JSON):
  *   { fn: 'entrar', token: '<ID token do Google>' }  → { sessao, exp, email }  (sessão de 30 dias)
+ *   { fn: 'gerarCodigo', sessao }                     → { codigo, validade }  (código de 6 dígitos, 10 min)
+ *   { fn: 'entrarComCodigo', codigo }                 → { sessao, exp, email } (para o app instalado no iPad)
  *   { fn: 'sair', sessao }                            → true
  *   { fn: '<função da API>', args: [...], sessao }    → o retorno da função
  * Resposta: { ok: true, data } ou { ok: false, erro: 'mensagem', auth?: true }
@@ -45,6 +47,8 @@ function doPost(e) {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     let data;
     if (req.fn === 'entrar') data = abrirSessao_(verificarLogin_(req.token));
+    else if (req.fn === 'entrarComCodigo') data = entrarComCodigo_(req.codigo);
+    else if (req.fn === 'gerarCodigo') data = gerarCodigo_(verificarSessao_(req.sessao));
     else if (req.fn === 'sair') data = fecharSessao_(req.sessao);
     else {
       verificarSessao_(req.sessao);
@@ -88,6 +92,36 @@ function fecharSessao_(sessao) {
   if (sessao) PropertiesService.getScriptProperties().deleteProperty(hashSessao_(sessao));
   return true;
 }
+/* ---------- código de pareamento ----------
+ * O login do Google não funciona no app instalado na Tela de Início do iPad (o iOS isola o armazenamento
+ * e a janela do Google não volta). Num aparelho já conectado, gerarCodigo cria um código de 6 dígitos,
+ * de uso único e válido por 10 minutos; no app instalado, entrarComCodigo troca o código por uma sessão.
+ * Proteção contra tentativa e erro: no máximo 10 códigos errados a cada 10 minutos (para todos os aparelhos).
+ */
+const VALIDADE_CODIGO = 600; // segundos
+function gerarCodigo_(email) {
+  const cache = CacheService.getScriptCache();
+  let codigo;
+  do {
+    codigo = String(100000 + parseInt(Utilities.getUuid().replace(/-/g, '').slice(0, 8), 16) % 900000);
+  } while (cache.get('codigo_' + codigo));
+  cache.put('codigo_' + codigo, email, VALIDADE_CODIGO);
+  return { codigo, validade: VALIDADE_CODIGO };
+}
+function entrarComCodigo_(codigo) {
+  const cache = CacheService.getScriptCache(), chaveT = 'codigo_tentativas';
+  const erradas = Number(cache.get(chaveT) || 0);
+  if (erradas >= 10) throw erroLogin_('Muitas tentativas erradas. Espere 10 minutos e gere um código novo.');
+  const c = String(codigo || '').replace(/\D/g, '');
+  const email = c.length === 6 ? cache.get('codigo_' + c) : null;
+  if (!email) {
+    cache.put(chaveT, String(erradas + 1), VALIDADE_CODIGO);
+    throw erroLogin_('Código inválido ou vencido. Gere um novo no aparelho já conectado.');
+  }
+  cache.remove('codigo_' + c);
+  return abrirSessao_(email);
+}
+
 /* apaga sessões vencidas (rodado a cada login) */
 function limparSessoes_() {
   const props = PropertiesService.getScriptProperties(), todas = props.getProperties(), agora = Date.now();

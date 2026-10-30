@@ -4,7 +4,7 @@ const vm = require('vm');
 
 function criarServidor(seedCode) {
   const DB = {};
-  const estado = { sessoes: new Set(), apiForaDoAr: false, chamadas: [] };
+  const estado = { sessoes: new Set(), codigos: new Set(), apiForaDoAr: false, chamadas: [] };
 
   function salvarMensagem(msg) {
     const atual = msg.id && DB[msg.id];
@@ -43,6 +43,19 @@ function criarServidor(seedCode) {
     try {
       if (req.fn === 'entrar') {
         if (req.token !== 'id-token-teste') return { ok: false, erro: 'Login inválido.', auth: true };
+        const sessao = 's' + Math.random().toString(36).slice(2);
+        estado.sessoes.add(sessao);
+        return { ok: true, data: { sessao, exp: Date.now() + 30 * 864e5, email: 'dono@teste' } };
+      }
+      if (req.fn === 'gerarCodigo') {
+        if (!estado.sessoes.has(req.sessao)) return { ok: false, erro: 'Sua sessão terminou. Entre de novo com o Google.', auth: true };
+        const codigo = String(100000 + Math.floor(Math.random() * 900000));
+        estado.codigos.add(codigo);
+        return { ok: true, data: { codigo, validade: 600 } };
+      }
+      if (req.fn === 'entrarComCodigo') {
+        if (!estado.codigos.has(String(req.codigo))) return { ok: false, erro: 'Código inválido ou vencido. Gere um novo no aparelho já conectado.', auth: true };
+        estado.codigos.delete(String(req.codigo));
         const sessao = 's' + Math.random().toString(36).slice(2);
         estado.sessoes.add(sessao);
         return { ok: true, data: { sessao, exp: Date.now() + 30 * 864e5, email: 'dono@teste' } };

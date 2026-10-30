@@ -241,6 +241,16 @@ body:has(.pg) #toast{bottom:auto;top:76px}
 #gbtn{min-height:44px;display:flex;justify-content:center}
 .lbox .off{display:flex;flex-direction:column;gap:10px;align-items:center}
 .lbox .err{color:var(--dan)}
+#lcodbox{display:flex;justify-content:center;width:100%}
+.lcod{display:flex;gap:8px;justify-content:center;align-items:center}
+.lcod input{width:8.5em;height:48px;padding:0 14px;border-radius:24px;border:1px solid var(--bd);background:var(--s1);outline:0;text-align:center;font-size:22px;letter-spacing:.18em;font-variant-numeric:tabular-nums}
+.lcod input:focus{border-color:var(--ac)}
+.lcod .btn{height:48px;border-radius:24px}
+.cod{padding:18px 22px 22px;text-align:center}
+.cod p{margin:0;line-height:1.5}
+.codigo{font-family:var(--fd);font-size:46px;font-weight:700;letter-spacing:.1em;font-variant-numeric:tabular-nums;margin:14px 0 10px;color:var(--ac)}
+.conta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 22px;margin-top:48px;padding-top:16px;border-top:1px solid var(--bd);color:var(--mu);font-size:14px}
+.conta .link{font-size:14px}
 
 @media (max-width:760px){
   .bar{padding:calc(10px + env(safe-area-inset-top)) 14px 10px}
@@ -333,6 +343,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
     cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
     copy: '<rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+    phone: '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
     logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
     upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>'
   };
@@ -598,18 +609,49 @@ body:has(.pg) #toast{bottom:auto;top:76px}
         token: resp && resp.credential
       });
       if (!r.ok) throw new Error(r.erro);
-      local.gravar(CHAVE_SESSAO, r.data);
-      esconderLogin();
-      if (esperaLogin) {
-        const e = esperaLogin;
-        esperaLogin = null;
-        e.ok(r.data.sessao);
-      }
+      concluirLogin(r.data);
     } catch (e) {
       if (caixa) {
         caixa.className = 'err';
         caixa.textContent = textoErro(e);
       }
+    }
+  }
+  function concluirLogin(dados) {
+    local.gravar(CHAVE_SESSAO, dados);
+    esconderLogin();
+    if (esperaLogin) {
+      const e = esperaLogin;
+      esperaLogin = null;
+      e.ok(dados.sessao);
+    } else if (S.view === 'lista') render();
+  }
+
+  /* app instalado na Tela de Início (lá o login do Google costuma não completar) */
+  const instalado = () => navigator.standalone === true || !!(window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  const vEntrarCodigo = () => "<div class=\"lcod\">\n  <input id=\"lcodigo\" inputmode=\"numeric\" autocomplete=\"one-time-code\" maxlength=\"7\" placeholder=\"000000\" aria-label=\"C\xF3digo de 6 d\xEDgitos\">\n  <button class=\"btn pri\" data-a=\"entrarCodigo\">Entrar</button>\n</div>";
+
+  /* troca o código de 6 dígitos, gerado num aparelho já conectado, por uma sessão */
+  async function entrarComCodigo() {
+    const inp = document.getElementById('lcodigo'),
+      caixa = document.getElementById('lmsg');
+    const c = String(inp ? inp.value : '').replace(/\D/g, '');
+    const msg = (t, erro) => {
+      if (caixa) {
+        caixa.className = erro ? 'err' : '';
+        caixa.textContent = t;
+      }
+    };
+    if (c.length !== 6) return msg('Digite os 6 números do código.', true);
+    msg('Entrando…');
+    try {
+      const r = await chamar('entrarComCodigo', [], {
+        codigo: c
+      });
+      if (!r.ok) throw new Error(r.erro);
+      concluirLogin(r.data);
+    } catch (e) {
+      msg(textoErro(e), true);
     }
   }
   let gisPronto = false;
@@ -635,7 +677,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       return;
     }
     el.className = 'on' + (S.view === 'lista' && !S.lista.length ? '' : ' sobre');
-    el.innerHTML = "<div class=\"lbox\">\n    <h1 class=\"logo\">Serm\xF5es</h1>\n    <p id=\"lmsg\">" + esc(motivo || 'Entre com a sua conta Google para abrir os seus sermões.') + "</p>\n    <div id=\"gbtn\"></div>\n    <div class=\"off\" id=\"loff\"></div>\n  </div>";
+    el.innerHTML = "<div class=\"lbox\">\n    <h1 class=\"logo\">Serm\xF5es</h1>\n    <p id=\"lmsg\">" + esc(motivo || 'Entre com a sua conta Google para abrir os seus sermões.') + "</p>\n    " + (instalado() ? '<p>No app instalado, o login do Google pode não funcionar. Abra o app no Safari ou no computador, toque em <b>Conectar outro aparelho</b> no fim da lista e digite aqui o código.</p>' : '') + "\n    <div id=\"gbtn\"></div>\n    <div id=\"lcodbox\">" + (instalado() ? vEntrarCodigo() : '<button class="link" data-a="mostrarCodigo">Entrar com código de outro aparelho</button>') + "</div>\n    <div class=\"off\" id=\"loff\"></div>\n  </div>";
     const tentar = n => {
       if (!document.getElementById('gbtn')) return;
       if (iniciarGoogle()) {
@@ -747,9 +789,13 @@ body:has(.pg) #toast{bottom:auto;top:76px}
 
   /* ======================= lista de sermões ======================= */
   function vLista() {
-    return "\n  <header class=\"lhead\">\n    <h1 class=\"logo\">Serm\xF5es</h1>\n    <label class=\"busca\">" + ic('search', 16) + "<input data-f=\"filtro\" placeholder=\"Procurar tema, pasta, parte ou vers\xEDculo\" aria-label=\"Procurar serm\xE3o\" value=\"" + esc(S.filtro) + "\"></label>\n    <label class=\"btn imp\" title=\"Importar serm\xE3o de um arquivo .json\">" + ic('upload', 16) + "<span class=\"lg\">Importar</span><input type=\"file\" accept=\".json,application/json\" data-f=\"importar\" aria-label=\"Importar serm\xE3o\"></label>\n    <button class=\"btn pri\" data-a=\"nova\">" + ic('plus', 16) + "<span>Novo<span class=\"lg\"> serm\xE3o</span></span></button>\n    <button class=\"ic sm\" data-a=\"sair\" title=\"Sair da conta neste aparelho\" aria-label=\"Sair da conta\">" + ic('logout', 18) + "</button>\n  </header>\n  " + (S.offline ? '<div class="aviso">Sem internet: mostrando os sermões salvos neste aparelho. As alterações são enviadas quando a conexão voltar.</div>' : '') + "\n  <main class=\"wrap\"><div id=\"res\">" + vResultados() + "</div></main>";
+    return "\n  <header class=\"lhead\">\n    <h1 class=\"logo\">Serm\xF5es</h1>\n    <label class=\"busca\">" + ic('search', 16) + "<input data-f=\"filtro\" placeholder=\"Procurar tema, pasta, parte ou vers\xEDculo\" aria-label=\"Procurar serm\xE3o\" value=\"" + esc(S.filtro) + "\"></label>\n    <label class=\"btn imp\" title=\"Importar serm\xE3o de um arquivo .json\">" + ic('upload', 16) + "<span class=\"lg\">Importar</span><input type=\"file\" accept=\".json,application/json\" data-f=\"importar\" aria-label=\"Importar serm\xE3o\"></label>\n    <button class=\"btn pri\" data-a=\"nova\">" + ic('plus', 16) + "<span>Novo<span class=\"lg\"> serm\xE3o</span></span></button>\n  </header>\n  " + (S.offline ? '<div class="aviso">Sem internet: mostrando os sermões salvos neste aparelho. As alterações são enviadas quando a conexão voltar.</div>' : '') + "\n  <main class=\"wrap\"><div id=\"res\">" + vResultados() + "</div>" + vConta() + "</main>";
   }
   const chaveItem = m => m.id || m._local;
+  function vConta() {
+    const s = lerSessao();
+    return "<footer class=\"conta\">\n    <span>" + (s && s.email ? 'Conectado como ' + esc(s.email) : 'Conta') + "</span>\n    <button class=\"link\" data-a=\"parear\">" + ic('phone', 15) + " Conectar outro aparelho</button>\n    <button class=\"link\" data-a=\"sair\">" + ic('logout', 15) + " Sair deste aparelho</button>\n  </footer>";
+  }
   function acoesCard(m) {
     if (!m.id) return '';
     return "<div class=\"acts\">\n    <button class=\"ic sm\" data-a=\"duplicar\" data-id=\"" + esc(m.id) + "\" title=\"Duplicar\" aria-label=\"Duplicar serm\xE3o\">" + ic('copy', 16) + "</button>\n    <button class=\"ic sm\" data-a=\"excluir\" data-id=\"" + esc(m.id) + "\" title=\"Excluir\" aria-label=\"Excluir serm\xE3o\">" + ic('trash', 16) + "</button>\n  </div>";
@@ -873,6 +919,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
   }
   function vModal() {
     if (!S.modal) return '';
+    if (S.modal.tipo === 'codigo') return "\n  <div class=\"ov\" data-a=\"fecharModal\">\n    <div class=\"md\">\n      <div class=\"mh\"><b>Conectar outro aparelho</b><button class=\"ic\" data-a=\"fecharModal\" aria-label=\"Fechar\">" + ic('x') + "</button></div>\n      <div class=\"cod\">\n        <p>No app instalado no iPad (ou em outro aparelho), toque em <b>Entrar com c\xF3digo</b> e digite:</p>\n        <div class=\"codigo\" aria-label=\"C\xF3digo\">" + esc(S.modal.codigo.slice(0, 3) + ' ' + S.modal.codigo.slice(3)) + "</div>\n        <p class=\"muted\">Vale por 10 minutos e s\xF3 pode ser usado uma vez.</p>\n      </div>\n    </div>\n  </div>";
     const it = S.modal.itens;
     return "\n  <div class=\"ov\" data-a=\"fecharModal\">\n    <div class=\"md\">\n      <div class=\"mh\"><b>Ligar a um culto da agenda</b><button class=\"ic\" data-a=\"fecharModal\" aria-label=\"Fechar\">" + ic('x') + "</button></div>\n      <div class=\"ml\">" + (it === null ? '<p class="muted">Carregando agenda…</p>' : it.length ? it.map((e, i) => "<button class=\"mi\" data-a=\"pickEvento\" data-i=\"" + i + "\"><span>" + esc(e.titulo || '(sem título)') + "</span><small>" + fmtDataHora(e.data) + "</small></button>").join('') : '<p class="muted">Nenhum evento entre a semana passada e os próximos 90 dias.</p>') + "</div>\n    </div>\n  </div>";
   }
@@ -1485,6 +1532,31 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       [arr[i], arr[j]] = [arr[j], arr[i]];
     };
     switch (a) {
+      case 'parear':
+        try {
+          const r = await run('gerarCodigo');
+          S.modal = {
+            tipo: 'codigo',
+            codigo: String(r.codigo)
+          };
+          render();
+        } catch (err) {
+          falha(err);
+        }
+        break;
+      case 'mostrarCodigo':
+        {
+          const box = document.getElementById('lcodbox');
+          if (box) {
+            box.innerHTML = vEntrarCodigo();
+            const i = document.getElementById('lcodigo');
+            if (i) i.focus();
+          }
+          break;
+        }
+      case 'entrarCodigo':
+        entrarComCodigo();
+        break;
       case 'semInternet':
         esconderLogin();
         if (esperaLogin) {
@@ -1893,6 +1965,11 @@ body:has(.pg) #toast{bottom:auto;top:76px}
 
   /* atalhos de teclado */
   document.addEventListener('keydown', e => {
+    if (e.target && e.target.id === 'lcodigo' && e.key === 'Enter') {
+      e.preventDefault();
+      entrarComCodigo();
+      return;
+    }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && S.view === 'editor') {
       e.preventDefault();
       salvar();

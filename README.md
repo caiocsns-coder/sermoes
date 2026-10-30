@@ -53,7 +53,9 @@ Troque `USUARIO` pelo seu usuário do GitHub e `sermoes` pelo nome do repositór
 1. Apague o atalho antigo da Tela de Início (o do link `/exec`).
 2. Abra `https://USUARIO.github.io/sermoes/` no Safari e entre com o Google.
 3. Toque em **Compartilhar → Adicionar à Tela de Início**.
-4. Abra pelo ícone novo e abra uma vez cada sermão que quiser ter disponível sem internet.
+4. Ainda no Safari, role a lista até o fim e toque em **Conectar outro aparelho**. Anote o código de 6 dígitos.
+5. Abra pelo ícone novo e digite o código. (No app instalado, o login do Google não completa; o código resolve.)
+6. Abra uma vez cada sermão que quiser ter disponível sem internet.
 
 ## Dia a dia
 - **Mudou a página** (`web/`): `npm test` e depois `git push`. A versão nova chega ao iPad na próxima vez que o app abrir com internet.

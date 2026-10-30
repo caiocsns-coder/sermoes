@@ -53,7 +53,7 @@ No editor do Apps Script ficam só **Código.gs** (ou Code.gs) e **Seed.gs**. O 
 
 - **Página:** `https://<usuário>.github.io/<repositório>/`, publicada da pasta `docs/` do branch `main` (Settings → Pages → Deploy from a branch → `main` / `/docs`). Funciona instalada (Compartilhar → Adicionar à Tela de Início).
 - **API:** o link `/exec` da implantação do Apps Script. A página chama `fetch(apiUrl, { method: 'POST', body: JSON })` com `Content-Type: text/plain`, para evitar a checagem prévia de CORS que o Apps Script não responde. O Apps Script devolve JSON pelo `ContentService`.
-- **Protocolo do `doPost`:** corpo `{ fn, args, sessao }`, resposta `{ ok: true, data }` ou `{ ok: false, erro, auth? }`. Só as funções da lista branca `API` (dentro do `doPost`) podem ser chamadas. As funções com `_` no fim do nome são internas e nunca são expostas.
+- **Protocolo do `doPost`:** corpo `{ fn, args, sessao }`, resposta `{ ok: true, data }` ou `{ ok: false, erro, auth? }`. Funções de acesso tratadas antes da lista branca: `entrar` (`token`), `entrarComCodigo` (`codigo`), `gerarCodigo` (`sessao`) e `sair` (`sessao`). Só as funções da lista branca `API` (dentro do `doPost`) podem ser chamadas. As funções com `_` no fim do nome são internas e nunca são expostas.
 - **Implantação:** App da Web, **Executar como: eu**, **Quem pode acessar: Qualquer pessoa**. Quem protege os dados é o login, não a implantação.
 - **Login com Google (Google Identity Services):**
   1. A página mostra o botão "Fazer login com o Google" (`accounts.google.com/gsi/client`, com o `googleClientId` do `config.json`).
@@ -61,7 +61,12 @@ No editor do Apps Script ficam só **Código.gs** (ou Code.gs) e **Seed.gs**. O 
   3. O servidor abre uma **sessão de 30 dias** (`abrirSessao_`). Só o hash dela fica nas Propriedades do script (`sessao_…`); a página guarda a sessão no `localStorage` (`sermoes.sessao`).
   4. O ID token do Google vale só 1 hora; a sessão própria evita pedir login a cada hora no iPad.
   5. Sessão vencida ou removida: a API responde `auth: true`, a página mostra o login de novo e repete a chamada.
-  6. `sair` apaga a sessão do aparelho. Para derrubar todas as sessões (por exemplo, se perder o iPad), rode `encerrarTodasAsSessoes()` no editor.
+  6. **Código de pareamento (app instalado no iPad):** no app da Tela de Início o iOS isola o armazenamento, e a janela do Google não devolve o login (confirmado no iPad em 30/out/2026). Por isso:
+     - num aparelho já conectado (Safari ou computador), "Conectar outro aparelho", no rodapé da lista, chama `gerarCodigo` (exige sessão). O servidor cria um código de 6 dígitos de uso único, válido por 10 minutos (`CacheService`);
+     - no app instalado, a tela de entrada já mostra o campo do código (`instalado()` detecta `navigator.standalone` / `display-mode: standalone`); em outros aparelhos, o link "Entrar com código de outro aparelho" mostra o campo;
+     - `entrarComCodigo` troca o código por uma sessão de 30 dias;
+     - limite: 10 códigos errados a cada 10 minutos; depois disso, bloqueia por 10 minutos.
+  7. `sair` apaga a sessão do aparelho. Para derrubar todas as sessões (por exemplo, se perder o iPad), rode `encerrarTodasAsSessoes()` no editor.
 - **Propriedades do script:** `GOOGLE_CLIENT_ID` (obrigatória), `DONO_EMAIL` (opcional), `APP_URL` (opcional, link mostrado por quem abrir o `/exec`), `YOUVERSION_KEY`, `PLANILHA_ID` (criada sozinha) e `sessao_…` (criadas sozinhas).
 - **Sem internet (no aparelho):**
   - o service worker guarda as telas, o manifesto, os ícones e as fontes;
@@ -253,7 +258,8 @@ Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodada
     - texto grande; no rodapé, a barra de partes (largura pelos minutos previstos), o marcador `#playhead` do tempo total, o cronômetro, "Nesta parte mm:ss de X min" (`#tparte`, laranja ao passar do previsto) e o botão com o título da próxima parte;
     - **tela acesa:** pede a Wake Lock API ao entrar e de novo ao voltar para o app (fora do iframe, o iPad com iOS 16.4 ou mais novo aceita). Se o navegador recusar, mostra uma vez a dica de desligar o Bloqueio Automático do iPad.
   - **Importar e exportar:** botão "Importar" na lista e ícone de download no editor (ver "Arquivo .sermao.json").
-  - **Entrada:** tela "Sermões" com o botão do Google; sem internet e com cópia no aparelho, oferece "Usar o que está salvo no aparelho". Na lista, o ícone de sair encerra a sessão do aparelho.
+  - **Rodapé da lista (`vConta()`):** "Conectado como …", "Conectar outro aparelho" (mostra o código num modal, `S.modal.tipo = 'codigo'`) e "Sair deste aparelho".
+  - **Entrada:** tela "Sermões" com o botão do Google e a entrada por código (`entrarComCodigo()`, `concluirLogin()`); sem internet e com cópia no aparelho, oferece "Usar o que está salvo no aparelho". Na lista, o ícone de sair encerra a sessão do aparelho.
 - **Inserir blocos:**
   - "+" abre e fecha a paleta;
   - digitar "/" abre a paleta e as letras seguintes filtram (`/v` Versículo, `/p` Parágrafo, `/l` Lista, `/c` Citação, `/i` Imagem, `/n` Nota para mim);
@@ -302,7 +308,7 @@ npm run setup               # uma vez: Babel + Playwright 1.56.1 (versão fixa) 
 # editar web/index.src.html e/ou src/Code.gs
 npm run build               # gera docs/ (página sem template literals, config preenchida, nova versão do sw.js)
 npm test                    # build + teste de ponta a ponta no Chromium, com API e login simulados;
-                            # cobre: login, inserir blocos (3 jeitos), busca de versículo, seleção, desfazer,
+                            # cobre: login, código de pareamento, inserir blocos (3 jeitos), busca de versículo, seleção, desfazer,
                             # tempo por parte, salvamento automático, conflito, sessão vencida,
                             # busca na lista, importar/exportar .sermao.json,
                             # modo sem internet (editar, criar e sincronizar) e Pregar
