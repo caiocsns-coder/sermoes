@@ -62,4 +62,6 @@ Troque `USUARIO` pelo seu usuário do GitHub e `sermoes` pelo nome do repositór
 - **Mudou o servidor** (`src/Code.gs`): cole no Apps Script e crie uma **Nova versão** da implantação.
 - **Importar um sermão escrito com o Claude:** baixe o `.sermao.json` gerado pela skill `exportar-sermao-app` e toque em **Importar** na lista do app.
 - **Backup ou compartilhar um sermão:** no editor, toque no ícone de download. No iPad abre a folha de compartilhamento (Salvar em Arquivos, AirDrop…).
+- **Backup automático:** execute `instalarBackupSemanal` uma vez no editor do Apps Script. Toda segunda às 4h, cada sermão vira um `.sermao.json` em "Sermões · backups" no Drive (ficam as 8 últimas semanas). Para restaurar um, importe o arquivo pelo app.
+- **Voltar uma versão ou recuperar um sermão excluído:** no editor, use a pílula **Versões**; na lista, use **Lixeira** no rodapé.
 - **Perdeu um aparelho:** execute `encerrarTodasAsSessoes` no editor do Apps Script. Todos os aparelhos vão pedir login de novo.

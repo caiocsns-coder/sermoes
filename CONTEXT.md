@@ -70,7 +70,8 @@ No editor do Apps Script ficam só **Código.gs** (ou Code.gs) e **Seed.gs**. O 
 - **Propriedades do script:** `GOOGLE_CLIENT_ID` (obrigatória), `DONO_EMAIL` (opcional), `APP_URL` (opcional, link mostrado por quem abrir o `/exec`), `YOUVERSION_KEY`, `PLANILHA_ID` (criada sozinha) e `sessao_…` (criadas sozinhas).
 - **Sem internet (no aparelho):**
   - o service worker guarda as telas, o manifesto, os ícones e as fontes;
-  - a página guarda no `localStorage` a lista (`sermoes.lista`), cada sermão aberto (`sermoes.msg.<id>`) e as pendências (`sermoes.pend`);
+  - a página guarda no `localStorage` a lista (`sermoes.lista`), cada sermão aberto (`sermoes.msg.<id>`) e as pendências (`sermoes.pend`). No máximo 40 sermões (`MAX_CACHE`, os usados mais recentemente, controlados em `sermoes.uso`); pendentes nunca são apagados. Se o espaço acabar, `liberarEspaco()` apaga os 10 menos usados e tenta de novo;
+  - as imagens dos sermões (até 60) ficam no cache do service worker; ao abrir um sermão, a página pré-carrega as imagens dele;
   - toda edição é copiada no aparelho em 300 ms e enviada ao servidor 2,5 s depois. Sem conexão, fica pendente ("Salvo no aparelho · envia quando a internet voltar"), e `sincronizar()` envia tudo no evento `online`, ao voltar para o app e ao abrir;
   - sermão criado sem internet usa a chave `_local` (`local-<timestamp>`) até ganhar o id do servidor;
   - a proteção contra conflito vale também para o que estava pendente;
@@ -111,6 +112,13 @@ Mensagem = {
     tempo?: number,      // minutos previstos para a parte, definidos pelo usuário (opcional, out/2026)
     _open?: boolean      // só na interface; o servidor descarta
   }],
+  pregacoes?: [{         // registro de cada vez que foi pregado (out/2026), no máximo 20
+    data: string,        // ISO
+    alvo: number,        // minutos
+    total: number,       // segundos
+    culto?: string,      // título do culto ligado, se for no mesmo dia
+    partes: [{ titulo, seg, prev /* min previstos */, palavras }]
+  }],
   atualizado: string     // ISO, definido pelo servidor ao salvar; também serve de "versão" contra conflitos
 }
 
@@ -148,6 +156,17 @@ Os dados ficam numa **planilha do Google**, na aba `Mensagens`, com uma linha po
 - `salvarMensagem` e `excluirMensagem` usam `LockService.getScriptLock()`.
 - **Conflito entre aparelhos:** `salvarMensagem` compara o `atualizado` enviado com o da planilha. Se forem diferentes, alguém salvou antes em outro aparelho, e ele lança um erro que começa com `CONFLITO:`. A página pergunta se quer manter a versão local (reenvia com `_sobrescrever: true`) ou descartar as alterações locais e abrir a versão salva.
 - `obterMensagem` devolve uma mensagem clara, com linha e coluna, se o JSON da célula estiver corrompido.
+- A célula `dados` guarda `{ eventos, topicos, pregacoes }`.
+
+### Histórico de versões, lixeira e backup (out/2026)
+
+- **Aba `Historico`:** as 6 colunas do sermão + `guardado` (ISO) + `motivo`. Motivos:
+  - `edição`: o estado anterior, guardado no primeiro salvamento depois de 30 min sem salvar (`INTERVALO_VERSAO`). Isso dá uma versão por sessão de edição, não uma por salvamento automático;
+  - `substituída por outro aparelho`: a versão do outro aparelho, quando um conflito é resolvido com "manter a minha";
+  - `antes de restaurar`: o estado atual, quando uma versão antiga é restaurada;
+  - `excluído`: a lixeira.
+- **Limites:** 15 versões por sermão (`VERSOES_POR_SERMAO`); a lixeira guarda por 60 dias (`DIAS_LIXEIRA`). A poda acontece a cada versão guardada (`podarHistorico_`).
+- **Backup:** `backupSemanal()` cria em "Sermões · backups" uma pasta com a data e um `.sermao.json` por sermão (importável pelo app) e guarda as 8 mais recentes. Para rodar toda segunda às 4h, execute `instalarBackupSemanal()` uma vez no editor (ele cria o acionador e já faz o primeiro backup). O app também tem "Backup no Drive agora" (`fazerBackup`).
 
 ### Decisão em aberto: migrar para JSON no Drive
 
@@ -198,10 +217,15 @@ Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodada
 | `listarMensagens()` | `[{id, tema, pasta, tempo, nTopicos, atualizado, busca}]` | ordenado por `atualizado` decrescente; `busca` (out/2026) traz os títulos das partes e as referências bíblicas, até 2 mil caracteres, para a busca da lista |
 | `obterMensagem(id)` | `Mensagem` | lança um erro se não existir |
 | `salvarMensagem(msg)` | `{id, atualizado}` | cria um registro se `msg.id` vier vazio; lança `CONFLITO: …` se `msg.atualizado` não bater com a planilha (exceto com `msg._sobrescrever`); guarda o `tempo` das partes |
-| `excluirMensagem(id)` | `true` | com lock |
-| `duplicarMensagem(id)` | `{id, atualizado}` | acrescenta " (cópia)" ao tema |
+| `excluirMensagem(id)` | `true` | com lock; o sermão vai para a lixeira (aba `Historico`) |
+| `duplicarMensagem(id)` | `{id, atualizado}` | acrescenta " (cópia)" ao tema; a cópia começa sem `pregacoes` |
 | `listarEventos()` | `[{id, titulo, data}]` | agenda padrão, de 7 dias atrás até 90 dias à frente, no máximo 80 eventos |
 | `enviarImagem(dataUrl, nome)` | URL | salva em "Sermões · imagens" no Drive, compartilhada por link, e devolve `drive.google.com/thumbnail?id=…&sz=w1600` |
+| `listarVersoes(id)` | `[{id, tema, pasta, atualizado, guardado, motivo, nTopicos}]` | versões guardadas do sermão, da mais nova para a mais antiga |
+| `restaurarVersao(id, guardado)` | `{id, atualizado}` | volta para a versão; o estado atual vira "antes de restaurar" |
+| `listarExcluidos()` | igual a `listarVersoes` | lixeira (só sermões que não voltaram para a lista) |
+| `restaurarExcluido(id)` | `{id, atualizado}` | devolve o sermão excluído para a lista |
+| `fazerBackup()` | `{pasta, sermoes, url}` | backup imediato no Drive (o mesmo do `backupSemanal`) |
 | `buscarVersiculo(ref, versao)` | `{texto, referencia, versao, copyright}` | **nova (out/2026)**; busca o texto no YouVersion Platform. Lança um erro em português quando a referência não é entendida, a versão não está no catálogo ou ainda não tem licença |
 
 **Escopos pedidos na primeira execução:** Planilhas, Drive, Agenda e "conectar a serviço externo" (`UrlFetchApp`, para o YouVersion e para conferir o login no Google). Não há `oauthScopes` no manifesto: o Apps Script detecta os escopos sozinho. A imagem é reduzida no navegador para no máximo 1600 px, em JPEG com qualidade 0.85, antes do envio.
@@ -253,12 +277,16 @@ Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodada
     - **tempo por parte:** cada parte aberta tem um campo "min". Vazio, o app estima: o que sobra do alvo depois das partes com tempo definido é dividido pelo número de palavras faladas (notas para mim não contam; mínimo de 15 palavras por parte);
     - as partes ficam numa linha vertical numerada, e só as abertas mostram os blocos;
     - no fim de cada parte aberta há o campo "Escreva aqui ou digite / para inserir" e um botão "+";
+    - **Versões:** a pílula "Versões" abre a lista de versões guardadas, com "Restaurar" (salva antes as alterações pendentes);
+    - a legenda mostra também "no seu ritmo ≈ X min" (depois de 10 min de pregações registradas neste aparelho) e "pregado N× · último …", que abre o resumo;
     - **blocos:** os botões subir/descer/remover só aparecem no bloco selecionado (tocar no bloco ou focar um campo dele: `selecionar()`, classe `.sel`), ou com `:focus-within`.
   - **Pregar:**
     - texto grande; no rodapé, a barra de partes (largura pelos minutos previstos), o marcador `#playhead` do tempo total, o cronômetro, "Nesta parte mm:ss de X min" (`#tparte`, laranja ao passar do previsto) e o botão com o título da próxima parte;
+    - **relatório da pregação:** ao sair do Pregar (depois de 1 minuto ou mais), `registrarPregacao()` guarda no sermão o tempo real de cada parte (`S.pr.tp`), o previsto e o número de palavras, e abre o resumo (previsto × real; laranja quando passou mais de 1 min, azul quando sobrou; "—" para parte não pregada), com "Descartar este registro";
+    - **ritmo pessoal:** `aprenderRitmo()` acumula palavras escritas por minuto falado (partes com 30 s ou mais e 20 palavras ou mais), com peso maior para as pregações recentes, em `localStorage` (`sermoes.ritmo`, por aparelho). Mede o quanto você expande o texto escrito, não a velocidade da fala;
     - **tela acesa:** pede a Wake Lock API ao entrar e de novo ao voltar para o app (fora do iframe, o iPad com iOS 16.4 ou mais novo aceita). Se o navegador recusar, mostra uma vez a dica de desligar o Bloqueio Automático do iPad.
   - **Importar e exportar:** botão "Importar" na lista e ícone de download no editor (ver "Arquivo .sermao.json").
-  - **Rodapé da lista (`vConta()`):** "Conectado como …", "Conectar outro aparelho" (mostra o código num modal, `S.modal.tipo = 'codigo'`) e "Sair deste aparelho".
+  - **Rodapé da lista (`vConta()`):** "Conectado como …", "Lixeira" (modal com "Restaurar"), "Backup no Drive agora", "Conectar outro aparelho" (mostra o código num modal, `S.modal.tipo = 'codigo'`) e "Sair deste aparelho".
   - **Entrada:** tela "Sermões" com o botão do Google e a entrada por código (`entrarComCodigo()`, `concluirLogin()`); sem internet e com cópia no aparelho, oferece "Usar o que está salvo no aparelho". Na lista, o ícone de sair encerra a sessão do aparelho.
 - **Inserir blocos:**
   - "+" abre e fecha a paleta;
@@ -270,7 +298,7 @@ Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodada
   - `click` usa `[data-a="ação"]`, com `data-t` (parte), `data-b` (bloco), `data-v` e `data-i`.
   - `input` usa `[data-f="campo"]` e só atualiza o estado, sem re-renderizar, para não perder o foco. O campo `ins` só atualiza a paleta (`atualizarPaleta`).
   - Ações estruturais (adicionar, mover, excluir) re-renderizam.
-  - **Desfazer:** excluir uma parte ou um bloco acontece na hora, sem janela de confirmação, e o aviso embaixo oferece "Desfazer" por 6 segundos (`toast(txt, erro, { rotulo, fn })`). Excluir um sermão continua pedindo confirmação, porque apaga no servidor.
+  - **Desfazer:** excluir uma parte, um bloco ou um sermão acontece na hora, sem janela de confirmação, e o aviso embaixo oferece "Desfazer" por 6 segundos (`toast(txt, erro, { rotulo, fn })`). O sermão excluído vai para a Lixeira.
 - **Atalhos:**
   - Ctrl/Cmd+S salva.
   - Num bloco Lista, Enter cria o próximo item e Backspace num item vazio o apaga.
@@ -310,7 +338,8 @@ npm run build               # gera docs/ (página sem template literals, config 
 npm test                    # build + teste de ponta a ponta no Chromium, com API e login simulados;
                             # cobre: login, código de pareamento, inserir blocos (3 jeitos), busca de versículo, seleção, desfazer,
                             # tempo por parte, salvamento automático, conflito, sessão vencida,
-                            # busca na lista, importar/exportar .sermao.json,
+                            # busca na lista, importar/exportar .sermao.json, versões, lixeira, backup,
+                            # relatório da pregação,
                             # modo sem internet (editar, criar e sincronizar) e Pregar
 git add -A && git commit -m "…" && git push   # o GitHub Pages publica docs/ em cerca de 1 minuto
 ```
@@ -338,7 +367,6 @@ O passo a passo completo, com prints do que procurar, está no `README.md`. Resu
 - Marcadores de slide em cada bloco (por exemplo, `slide: 12`), para integrar com o PowerPoint do sermão.
 - Modo claro, opcional.
 - Se a Wake Lock API ainda falhar no iPad instalado, testar a alternativa de um vídeo mudo em loop (técnica do NoSleep.js).
-- Guardar sem internet também as imagens dos sermões (hoje elas vêm do Drive e precisam de conexão).
 - Arrastar para reordenar partes e blocos, no lugar das setas.
 
 ## Convenções de conteúdo (herdadas do projeto da igreja)

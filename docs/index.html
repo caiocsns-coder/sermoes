@@ -246,6 +246,25 @@ body:has(.pg) #toast{bottom:auto;top:76px}
 .lcod input{width:8.5em;height:48px;padding:0 14px;border-radius:24px;border:1px solid var(--bd);background:var(--s1);outline:0;text-align:center;font-size:22px;letter-spacing:.18em;font-variant-numeric:tabular-nums}
 .lcod input:focus{border-color:var(--ac)}
 .lcod .btn{height:48px;border-radius:24px}
+.vr{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px}
+.vr:hover{background:var(--s2)}
+.vr div{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.vr small{color:var(--mu)}
+.vr .btn{height:38px;padding:0 14px;font-size:14px}
+.pres{display:flex;align-items:baseline;gap:10px;padding:8px 12px 4px}
+.pres b{font-family:var(--fd);font-size:34px;font-variant-numeric:tabular-nums}
+.pres span{color:var(--mu)}
+.ptab{width:calc(100% - 24px);margin:8px 12px;border-collapse:collapse;font-size:15px}
+.ptab th{text-align:left;color:var(--mu);font-weight:400;font-size:13px;padding:6px 4px;border-bottom:1px solid var(--bd)}
+.ptab td{padding:7px 4px;border-bottom:1px solid var(--bd);font-variant-numeric:tabular-nums}
+.ptab td:first-child{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mais{color:var(--warn)}
+.menos{color:var(--ac)}
+.outras{display:flex;flex-wrap:wrap;gap:6px;padding:4px 12px}
+.chip2{height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--bd);font-size:13px;color:var(--mu)}
+.chip2.on{border-color:var(--ac);color:var(--ac)}
+.link.inl{min-height:0;padding:0;font-size:inherit}
+.ml .pfoot{padding:4px 12px 8px}
 .cod{padding:18px 22px 22px;text-align:center}
 .cod p{margin:0;line-height:1.5}
 .codigo{font-family:var(--fd);font-size:46px;font-weight:700;letter-spacing:.1em;font-variant-numeric:tabular-nums;margin:14px 0 10px;color:var(--ac)}
@@ -343,6 +362,9 @@ body:has(.pg) #toast{bottom:auto;top:76px}
     cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
     copy: '<rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+    history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+    archive: '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
+    cloud: '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
     phone: '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
     logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
     upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>'
@@ -519,10 +541,34 @@ body:has(.pg) #toast{bottom:auto;top:76px}
     if (sim) p.add(chave);else p.delete(chave);
     local.gravar(CACHE_PEND, [...p]);
   }
+  /* o aparelho guarda no máximo MAX_CACHE sermões (os usados mais recentemente); pendentes nunca são apagados */
+  const CACHE_USO = 'sermoes.uso',
+    MAX_CACHE = 40;
+  function liberarEspaco(qtd) {
+    const uso = local.ler(CACHE_USO) || {},
+      pend = new Set(pendentes());
+    const livres = Object.keys(uso).filter(k => !pend.has(k)).sort((a, b) => uso[a] - uso[b]);
+    const sobra = Math.max(qtd || 0, Object.keys(uso).length - MAX_CACHE);
+    livres.slice(0, sobra).forEach(k => {
+      delete uso[k];
+      local.apagar(CACHE_MSG + k);
+    });
+    local.gravar(CACHE_USO, uso);
+  }
   function guardarMsg(m) {
-    const c = JSON.parse(JSON.stringify(m));
+    const c = JSON.parse(JSON.stringify(m)),
+      chave = chaveMsg(m);
     c.topicos.forEach(t => delete t._open);
-    if (!local.gravar(CACHE_MSG + chaveMsg(m), c)) toast('Não consegui guardar uma cópia no aparelho (espaço cheio?).', true);
+    let ok = local.gravar(CACHE_MSG + chave, c);
+    if (!ok) {
+      liberarEspaco(10);
+      ok = local.gravar(CACHE_MSG + chave, c);
+    } // espaço cheio: apaga os menos usados e tenta de novo
+    if (!ok) return toast('Não consegui guardar uma cópia no aparelho (espaço cheio).', true);
+    const uso = local.ler(CACHE_USO) || {};
+    uso[chave] = Date.now();
+    local.gravar(CACHE_USO, uso);
+    if (Object.keys(uso).length > MAX_CACHE) liberarEspaco(0);
   }
 
   /* ======================= servidor (Apps Script) e login ======================= */
@@ -722,6 +768,13 @@ body:has(.pg) #toast{bottom:auto;top:76px}
     hour: '2-digit',
     minute: '2-digit'
   }) : '';
+  const fmtDataHoraAno = iso => iso ? new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }) : '';
   const mmss = s => String(Math.floor(s / 60)).padStart(2, '0') + ":" + String(s % 60).padStart(2, '0');
   const fmtMin = x => x > 0 && x < 1 ? '<1' : String(Math.round(x));
   const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -772,6 +825,33 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       est: true
     });
   }
+  /* ritmo pessoal (palavras por minuto), aprendido nas pregações registradas neste aparelho */
+  const CACHE_RITMO = 'sermoes.ritmo';
+  /* só depois de 10 minutos de pregação registrada, para não projetar o sermão inteiro com poucos dados */
+  function ritmo() {
+    const r = local.ler(CACHE_RITMO);
+    return r && r.seg >= 600 ? r.pal / (r.seg / 60) : 0;
+  }
+  function aprenderRitmo(reg) {
+    let pal = 0,
+      seg = 0;
+    reg.partes.forEach(p => {
+      if (p.seg >= 30 && p.palavras >= 20) {
+        pal += p.palavras;
+        seg += p.seg;
+      }
+    });
+    if (seg < 60) return;
+    const r = local.ler(CACHE_RITMO) || {
+      pal: 0,
+      seg: 0
+    };
+    local.gravar(CACHE_RITMO, {
+      pal: r.pal * 0.6 + pal,
+      seg: r.seg * 0.6 + seg
+    }); // pregações recentes pesam mais
+  }
+
   /* tamanho do JSON que o servidor grava (mesma forma do salvarMensagem) */
   function tamanho(m) {
     return JSON.stringify({
@@ -794,7 +874,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
   const chaveItem = m => m.id || m._local;
   function vConta() {
     const s = lerSessao();
-    return "<footer class=\"conta\">\n    <span>" + (s && s.email ? 'Conectado como ' + esc(s.email) : 'Conta') + "</span>\n    <button class=\"link\" data-a=\"parear\">" + ic('phone', 15) + " Conectar outro aparelho</button>\n    <button class=\"link\" data-a=\"sair\">" + ic('logout', 15) + " Sair deste aparelho</button>\n  </footer>";
+    return "<footer class=\"conta\">\n    <span>" + (s && s.email ? 'Conectado como ' + esc(s.email) : 'Conta') + "</span>\n    <button class=\"link\" data-a=\"lixeira\">" + ic('archive', 15) + " Lixeira</button>\n    <button class=\"link\" data-a=\"backup\">" + ic('cloud', 15) + " Backup no Drive agora</button>\n    <button class=\"link\" data-a=\"parear\">" + ic('phone', 15) + " Conectar outro aparelho</button>\n    <button class=\"link\" data-a=\"sair\">" + ic('logout', 15) + " Sair deste aparelho</button>\n  </footer>";
   }
   function acoesCard(m) {
     if (!m.id) return '';
@@ -834,13 +914,17 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       tps = temposPartes(m);
     const total = tps.reduce((s, x) => s + x.min, 0);
     const pct = Math.round(tamanho(m) / LIMITE * 100);
-    return "" + plural(n, 'parte', 'partes') + (" \xB7 <span class=\"" + (total > m.tempo + 0.5 ? 'warn' : '') + "\">previsto " + fmtMin(total) + " de " + m.tempo + " min</span>") + (" \xB7 <span class=\"" + (pct >= 80 ? 'warn' : '') + "\" title=\"Espa\xE7o usado na c\xE9lula da planilha\">" + pct + "% do espa\xE7o</span>");
+    const ppm = ritmo(),
+      noRitmo = ppm ? m.topicos.reduce((x, t) => x + palavras(t), 0) / ppm : 0;
+    const pr = m.pregacoes || [],
+      ult = pr[pr.length - 1];
+    return "" + plural(n, 'parte', 'partes') + (" \xB7 <span class=\"" + (total > m.tempo + 0.5 ? 'warn' : '') + "\">previsto " + fmtMin(total) + " de " + m.tempo + " min</span>") + (noRitmo >= 1 ? " \xB7 <span class=\"" + (noRitmo > m.tempo + 2 ? 'warn' : '') + "\" title=\"Palavras do serm\xE3o divididas pelo seu ritmo nas \xFAltimas prega\xE7\xF5es\">no seu ritmo \u2248 " + fmtMin(noRitmo) + " min</span>" : '') + (" \xB7 <span class=\"" + (pct >= 80 ? 'warn' : '') + "\" title=\"Espa\xE7o usado na c\xE9lula da planilha\">" + pct + "% do espa\xE7o</span>") + (ult ? " \xB7 <button class=\"link inl\" data-a=\"verPregacao\" data-i=\"" + (pr.length - 1) + "\">pregado " + pr.length + "\xD7 \xB7 \xFAltimo " + fmtData(ult.data) + ", " + mmss(ult.total) + "</button>" : '');
   }
   function vEditor() {
     const m = S.msg,
       n = m.topicos.length,
       tps = temposPartes(m);
-    return "\n  <header class=\"bar\">\n    <button class=\"ic fill\" data-a=\"voltar\" title=\"Voltar\" aria-label=\"Voltar para os serm\xF5es\">" + ic('back', 20) + "</button><div class=\"sp\"></div>\n    <span class=\"status " + (S.dirty ? 'dirty' : estaPendente() ? 'pend' : '') + "\" id=\"status\">" + txtStatus() + "</span>\n    <button class=\"ic fill\" data-a=\"exportar\" title=\"Exportar serm\xE3o (.json)\" aria-label=\"Exportar serm\xE3o\">" + ic('download', 18) + "</button>\n    <button class=\"btn\" data-a=\"salvar\">Salvar</button>\n    <button class=\"btn pri\" data-a=\"pregar\">" + ic('play', 14) + " Pregar</button>\n  </header>\n  <main class=\"ed\">\n    <textarea class=\"tema\" data-f=\"tema\" rows=\"1\" placeholder=\"Tema do serm\xE3o\" aria-label=\"Tema\">" + esc(m.tema) + "</textarea>\n    <div class=\"pills\">\n      <label class=\"pill\">" + ic('folder', 15) + "<input data-f=\"pasta\" placeholder=\"Sem pasta\" list=\"pastas\" aria-label=\"Pasta\" value=\"" + esc(m.pasta) + "\" size=\"" + Math.max(12, (m.pasta || '').length + 2) + "\"></label>\n      <datalist id=\"pastas\">" + pastas().map(p => "<option value=\"" + esc(p) + "\">").join('') + "</datalist>\n      <datalist id=\"versoes\">" + VERSOES.map(v => "<option value=\"" + v + "\">").join('') + "</datalist>\n      <label class=\"pill\">" + ic('clock', 15) + "<span>Alvo de</span><select data-f=\"tempo\" aria-label=\"Dura\xE7\xE3o\">" + TEMPOS.map(t => "<option value=\"" + t + "\" " + (m.tempo == t ? 'selected' : '') + ">" + t + " min</option>").join('') + "</select>" + ic('chevDown', 14) + "</label>\n      " + (m.eventos || []).map((e, i) => "<span class=\"pill ev\">" + ic('cal', 15) + esc(e.titulo) + " \xB7 " + fmtData(e.data) + "<button class=\"ic sm\" data-a=\"desvEvento\" data-i=\"" + i + "\" title=\"Desligar\" aria-label=\"Desligar este culto\">" + ic('x', 14) + "</button></span>").join('') + "\n      <button class=\"pill add\" data-a=\"vincular\">" + ic('plus', 15) + " Ligar a um culto</button>\n    </div>\n\n    " + (n > 1 ? "<div class=\"tl\" id=\"tl\">" + m.topicos.map((t, ti) => "<button class=\"" + (t._open ? 'on' : '') + "\" style=\"flex:" + Math.max(0.5, tps[ti].min) + "\" data-a=\"irParte\" data-t=\"" + ti + "\" title=\"" + esc(t.titulo || 'Parte ' + (ti + 1)) + " \xB7 " + fmtMin(tps[ti].min) + " min\">" + (ti + 1) + "</button>").join('') + "</div>" : '') + "\n    <div class=\"tlcap\" id=\"tlcap\">" + vLinhaCap() + "</div>\n\n    <div class=\"partes\">\n      " + m.topicos.map((t, ti) => vParte(t, ti, tps[ti])).join('') + "\n      <div class=\"no add\"><b>" + ic('plus', 14) + "</b></div>\n      <div class=\"pt\"><button class=\"tt\" data-a=\"addTopico\" style=\"color:var(--ac)\">Nova parte</button></div>\n    </div>\n  </main>";
+    return "\n  <header class=\"bar\">\n    <button class=\"ic fill\" data-a=\"voltar\" title=\"Voltar\" aria-label=\"Voltar para os serm\xF5es\">" + ic('back', 20) + "</button><div class=\"sp\"></div>\n    <span class=\"status " + (S.dirty ? 'dirty' : estaPendente() ? 'pend' : '') + "\" id=\"status\">" + txtStatus() + "</span>\n    <button class=\"ic fill\" data-a=\"exportar\" title=\"Exportar serm\xE3o (.json)\" aria-label=\"Exportar serm\xE3o\">" + ic('download', 18) + "</button>\n    <button class=\"btn\" data-a=\"salvar\">Salvar</button>\n    <button class=\"btn pri\" data-a=\"pregar\">" + ic('play', 14) + " Pregar</button>\n  </header>\n  <main class=\"ed\">\n    <textarea class=\"tema\" data-f=\"tema\" rows=\"1\" placeholder=\"Tema do serm\xE3o\" aria-label=\"Tema\">" + esc(m.tema) + "</textarea>\n    <div class=\"pills\">\n      <label class=\"pill\">" + ic('folder', 15) + "<input data-f=\"pasta\" placeholder=\"Sem pasta\" list=\"pastas\" aria-label=\"Pasta\" value=\"" + esc(m.pasta) + "\" size=\"" + Math.max(12, (m.pasta || '').length + 2) + "\"></label>\n      <datalist id=\"pastas\">" + pastas().map(p => "<option value=\"" + esc(p) + "\">").join('') + "</datalist>\n      <datalist id=\"versoes\">" + VERSOES.map(v => "<option value=\"" + v + "\">").join('') + "</datalist>\n      <label class=\"pill\">" + ic('clock', 15) + "<span>Alvo de</span><select data-f=\"tempo\" aria-label=\"Dura\xE7\xE3o\">" + TEMPOS.map(t => "<option value=\"" + t + "\" " + (m.tempo == t ? 'selected' : '') + ">" + t + " min</option>").join('') + "</select>" + ic('chevDown', 14) + "</label>\n      " + (m.eventos || []).map((e, i) => "<span class=\"pill ev\">" + ic('cal', 15) + esc(e.titulo) + " \xB7 " + fmtData(e.data) + "<button class=\"ic sm\" data-a=\"desvEvento\" data-i=\"" + i + "\" title=\"Desligar\" aria-label=\"Desligar este culto\">" + ic('x', 14) + "</button></span>").join('') + "\n      <button class=\"pill add\" data-a=\"vincular\">" + ic('plus', 15) + " Ligar a um culto</button>\n      <button class=\"pill\" data-a=\"versoes\">" + ic('history', 15) + " Vers\xF5es</button>\n    </div>\n\n    " + (n > 1 ? "<div class=\"tl\" id=\"tl\">" + m.topicos.map((t, ti) => "<button class=\"" + (t._open ? 'on' : '') + "\" style=\"flex:" + Math.max(0.5, tps[ti].min) + "\" data-a=\"irParte\" data-t=\"" + ti + "\" title=\"" + esc(t.titulo || 'Parte ' + (ti + 1)) + " \xB7 " + fmtMin(tps[ti].min) + " min\">" + (ti + 1) + "</button>").join('') + "</div>" : '') + "\n    <div class=\"tlcap\" id=\"tlcap\">" + vLinhaCap() + "</div>\n\n    <div class=\"partes\">\n      " + m.topicos.map((t, ti) => vParte(t, ti, tps[ti])).join('') + "\n      <div class=\"no add\"><b>" + ic('plus', 14) + "</b></div>\n      <div class=\"pt\"><button class=\"tt\" data-a=\"addTopico\" style=\"color:var(--ac)\">Nova parte</button></div>\n    </div>\n  </main>";
   }
   function vParte(t, ti, tp) {
     const ult = ti === S.msg.topicos.length - 1;
@@ -917,8 +1001,34 @@ body:has(.pg) #toast{bottom:auto;top:76px}
         return b.texto ? "<p class=\"r-txt\">" + esc(b.texto) + "</p>" : '';
     }
   }
+  const MOTIVOS = {
+    'edição': 'Antes de uma nova edição',
+    'substituída por outro aparelho': 'Versão do outro aparelho (substituída)',
+    'antes de restaurar': 'Antes de restaurar outra versão'
+  };
+  const vCaixa = (titulo, corpo) => "\n  <div class=\"ov\" data-a=\"fecharModal\">\n    <div class=\"md\">\n      <div class=\"mh\"><b>" + titulo + "</b><button class=\"ic\" data-a=\"fecharModal\" aria-label=\"Fechar\">" + ic('x') + "</button></div>\n      <div class=\"ml\">" + corpo + "</div>\n    </div>\n  </div>";
+  function vModalExtra() {
+    const md = S.modal;
+    if (md.tipo === 'versoes') return vCaixa('Versões anteriores', md.itens === null ? '<p class="muted">Carregando…</p>' : md.itens.length ? md.itens.map((v, i) => "<div class=\"vr\"><div><b>" + fmtDataHoraAno(v.atualizado) + "</b><small>" + esc(MOTIVOS[v.motivo] || v.motivo) + " \xB7 " + esc(v.tema || 'Sem tema') + " \xB7 " + plural(v.nTopicos, 'parte', 'partes') + "</small></div><button class=\"btn\" data-a=\"restaurarVersao\" data-i=\"" + i + "\">Restaurar</button></div>").join('') + '<p class="muted">O app guarda o estado anterior a cada nova sessão de edição, até 15 versões.</p>' : '<p class="muted">Ainda não há versões anteriores. Elas aparecem depois que você voltar a editar este sermão em outro momento (30 min depois do último salvamento).</p>');
+    if (md.tipo === 'lixeira') return vCaixa('Lixeira', md.itens === null ? '<p class="muted">Carregando…</p>' : md.itens.length ? md.itens.map((v, i) => "<div class=\"vr\"><div><b>" + esc(v.tema || 'Sem tema') + "</b><small>exclu\xEDdo em " + fmtDataHoraAno(v.guardado) + " \xB7 " + plural(v.nTopicos, 'parte', 'partes') + "</small></div><button class=\"btn\" data-a=\"restaurarExcluido\" data-i=\"" + i + "\">Restaurar</button></div>").join('') + '<p class="muted">Sermões excluídos ficam aqui por 60 dias.</p>' : '<p class="muted">A lixeira está vazia.</p>');
+    if (md.tipo === 'pregacao') {
+      const pr = S.msg.pregacoes || [],
+        r = pr[md.i];
+      if (!r) return '';
+      const linhas = r.partes.map(p => {
+        const dif = p.prev ? p.seg / 60 - p.prev : 0;
+        const real = p.seg ? "<td class=\"" + (dif > 1 ? 'mais' : dif < -1 ? 'menos' : '') + "\">" + mmss(p.seg) + "</td>" : '<td class="muted" title="Não pregada">—</td>';
+        return "<tr><td>" + esc(p.titulo) + "</td><td>" + (p.prev ? fmtMin(p.prev) + ' min' : '–') + "</td>" + real + "</tr>";
+      }).join('');
+      const outras = pr.length > 1 ? '<div class="outras">' + pr.map((x, k) => "<button class=\"chip2 " + (k === md.i ? 'on' : '') + "\" data-a=\"verPregacao\" data-i=\"" + k + "\">" + fmtData(x.data) + "</button>").join('') + '</div>' : '';
+      return vCaixa(md.novo ? 'Pregação registrada' : 'Pregação', "\n      <div class=\"pres\"><b class=\"" + (r.total > r.alvo * 60 ? 'mais' : '') + "\">" + mmss(r.total) + "</b><span>de " + r.alvo + " min \xB7 " + fmtDataHora(r.data) + (r.culto ? ' · ' + esc(r.culto) : '') + "</span></div>\n      <table class=\"ptab\"><thead><tr><th>Parte</th><th>Previsto</th><th>Real</th></tr></thead><tbody>" + linhas + "</tbody></table>\n      " + outras + "\n      <p class=\"muted\">" + (ritmo() ? 'Seu ritmo nas últimas pregações: ' + Math.round(ritmo()) + ' palavras por minuto. O editor usa isso para mostrar "no seu ritmo".' : 'Com mais pregações registradas, o editor passa a mostrar quanto tempo o sermão leva no seu ritmo.') + "</p>\n      " + (md.novo ? '<div class="pfoot"><button class="link danger" data-a="descartarPregacao">Descartar este registro</button></div>' : ''));
+    }
+    return null;
+  }
   function vModal() {
     if (!S.modal) return '';
+    const extra = vModalExtra();
+    if (extra !== null) return extra;
     if (S.modal.tipo === 'codigo') return "\n  <div class=\"ov\" data-a=\"fecharModal\">\n    <div class=\"md\">\n      <div class=\"mh\"><b>Conectar outro aparelho</b><button class=\"ic\" data-a=\"fecharModal\" aria-label=\"Fechar\">" + ic('x') + "</button></div>\n      <div class=\"cod\">\n        <p>No app instalado no iPad (ou em outro aparelho), toque em <b>Entrar com c\xF3digo</b> e digite:</p>\n        <div class=\"codigo\" aria-label=\"C\xF3digo\">" + esc(S.modal.codigo.slice(0, 3) + ' ' + S.modal.codigo.slice(3)) + "</div>\n        <p class=\"muted\">Vale por 10 minutos e s\xF3 pode ser usado uma vez.</p>\n      </div>\n    </div>\n  </div>";
     const it = S.modal.itens;
     return "\n  <div class=\"ov\" data-a=\"fecharModal\">\n    <div class=\"md\">\n      <div class=\"mh\"><b>Ligar a um culto da agenda</b><button class=\"ic\" data-a=\"fecharModal\" aria-label=\"Fechar\">" + ic('x') + "</button></div>\n      <div class=\"ml\">" + (it === null ? '<p class="muted">Carregando agenda…</p>' : it.length ? it.map((e, i) => "<button class=\"mi\" data-a=\"pickEvento\" data-i=\"" + i + "\"><span>" + esc(e.titulo || '(sem título)') + "</span><small>" + fmtDataHora(e.data) + "</small></button>").join('') : '<p class="muted">Nenhum evento entre a semana passada e os próximos 90 dias.</p>') + "</div>\n    </div>\n  </div>";
@@ -1289,6 +1399,12 @@ body:has(.pg) #toast{bottom:auto;top:76px}
     S.view = 'editor';
     render();
     window.scrollTo(0, 0);
+    m.topicos.forEach(t => t.blocos.forEach(b => {
+      if (b.tipo === 'imagem' && b.url) {
+        const im = new Image();
+        im.src = b.url;
+      }
+    }));
     if (pend) {
       S.dirty = true;
       atualizarStatus();
@@ -1411,7 +1527,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
   async function resolverConflito(erro) {
     S.conflito = true;
     const motivo = textoErro(erro).replace(/^CONFLITO:\s*/i, '');
-    const manter = confirm(motivo.charAt(0).toUpperCase() + motivo.slice(1) + '\n\nOK: manter a versão deste aparelho (substitui a outra).' + '\nCancelar: descartar as alterações daqui e abrir a versão salva.');
+    const manter = confirm(motivo.charAt(0).toUpperCase() + motivo.slice(1) + '\n\nOK: manter a versão deste aparelho (a outra fica guardada em Versões).' + '\nCancelar: descartar as alterações daqui e abrir a versão salva.');
     S.conflito = false;
     if (manter) {
       S.sobrescrever = true;
@@ -1500,10 +1616,44 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       }
     });
   }
+  /* ao sair do Pregar (depois de 1 minuto ou mais), guarda o tempo real de cada parte no sermão */
+  function registrarPregacao() {
+    fecharParte();
+    const total = Math.floor(tempoDecorrido() / 1000);
+    if (total < 60) return null;
+    const m = S.msg,
+      prev = S.pr.prev,
+      hoje = new Date().toDateString();
+    const reg = {
+      data: new Date().toISOString(),
+      alvo: m.tempo,
+      total,
+      partes: m.topicos.map((t, k) => ({
+        titulo: t.titulo || 'Parte ' + (k + 1),
+        seg: Math.round((S.pr.tp[k] || 0) / 1000),
+        prev: prev[k] ? Math.round(prev[k].min * 10) / 10 : 0,
+        palavras: palavras(t)
+      }))
+    };
+    const culto = (m.eventos || []).find(e => e.data && new Date(e.data).toDateString() === hoje);
+    if (culto) reg.culto = culto.titulo;
+    m.pregacoes = (m.pregacoes || []).concat([reg]).slice(-20);
+    aprenderRitmo(reg);
+    return reg;
+  }
   function sairPregar() {
     clearInterval(S.timerId);
     soltarTela();
     S.view = 'editor';
+    const reg = registrarPregacao();
+    if (reg) {
+      S.modal = {
+        tipo: 'pregacao',
+        i: S.msg.pregacoes.length - 1,
+        novo: true
+      };
+      marcar();
+    }
     render();
   }
   function irTopico(k) {
@@ -1532,6 +1682,91 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       [arr[i], arr[j]] = [arr[j], arr[i]];
     };
     switch (a) {
+      case 'lixeira':
+        S.modal = {
+          tipo: 'lixeira',
+          itens: null
+        };
+        render();
+        try {
+          S.modal.itens = await run('listarExcluidos');
+        } catch (err) {
+          S.modal = null;
+          falha(err);
+        }
+        render();
+        break;
+      case 'restaurarExcluido':
+        {
+          const v = S.modal.itens[+el.dataset.i];
+          try {
+            await run('restaurarExcluido', v.id);
+            S.modal = null;
+            toast('“' + (v.tema || 'Sem tema') + '” voltou para a lista');
+            carregarLista();
+          } catch (err) {
+            falha(err);
+          }
+          break;
+        }
+      case 'backup':
+        toast('Fazendo backup no Drive…');
+        try {
+          const r = await run('fazerBackup');
+          toast('Backup feito: ' + plural(r.sermoes, 'sermão', 'sermões') + ' em ' + r.pasta, false, r.url ? {
+            rotulo: 'Abrir',
+            fn: () => window.open(r.url, '_blank')
+          } : null, 9000);
+        } catch (err) {
+          falha(err);
+        }
+        break;
+      case 'versoes':
+        if (!m.id) return toast('Este sermão ainda não foi salvo no servidor.', true);
+        S.modal = {
+          tipo: 'versoes',
+          itens: null
+        };
+        render();
+        try {
+          S.modal.itens = await run('listarVersoes', m.id);
+        } catch (err) {
+          S.modal = null;
+          falha(err);
+        }
+        render();
+        break;
+      case 'restaurarVersao':
+        {
+          const v = S.modal.itens[+el.dataset.i];
+          if (!confirm('Voltar para a versão de ' + fmtDataHoraAno(v.atualizado) + '? A versão atual fica guardada no histórico.')) return;
+          if (S.dirty && (await salvar(true)) !== true) return toast('Salve as alterações (com internet) antes de restaurar.', true);
+          try {
+            await run('restaurarVersao', m.id, v.guardado);
+            S.modal = null;
+            marcarPendente(m.id, false);
+            local.apagar(CACHE_MSG + m.id);
+            await abrir(m.id);
+            toast('Versão restaurada');
+          } catch (err) {
+            falha(err);
+          }
+          break;
+        }
+      case 'verPregacao':
+        S.modal = {
+          tipo: 'pregacao',
+          i: +el.dataset.i
+        };
+        render();
+        break;
+      case 'descartarPregacao':
+        m.pregacoes.splice(S.modal.i, 1);
+        S.modal = null;
+        marcar();
+        render();
+        toast('Registro descartado');
+        break;
       case 'parear':
         try {
           const r = await run('gerarCodigo');
@@ -1604,16 +1839,30 @@ body:has(.pg) #toast{bottom:auto;top:76px}
         abrir(el.dataset.id);
         break;
       case 'excluir':
-        e.stopPropagation();
-        if (!confirm('Excluir este sermão? Não dá para desfazer.')) return;
-        try {
-          await run('excluirMensagem', el.dataset.id);
-          toast('Sermão excluído');
-          carregarLista();
-        } catch (err) {
-          falha(err);
+        {
+          e.stopPropagation();
+          const id = el.dataset.id;
+          try {
+            await run('excluirMensagem', id);
+            marcarPendente(id, false);
+            local.apagar(CACHE_MSG + id);
+            toast('Sermão movido para a Lixeira', false, {
+              rotulo: 'Desfazer',
+              fn: async () => {
+                try {
+                  await run('restaurarExcluido', id);
+                  carregarLista();
+                } catch (err) {
+                  falha(err);
+                }
+              }
+            });
+            carregarLista();
+          } catch (err) {
+            falha(err);
+          }
+          break;
         }
-        break;
       case 'duplicar':
         e.stopPropagation();
         try {
@@ -1978,7 +2227,10 @@ body:has(.pg) #toast{bottom:auto;top:76px}
     if (S.view === 'pregar') {
       if (e.key === 'ArrowRight' || e.key === 'PageDown') irTopico(S.pr.i + 1);
       if (e.key === 'ArrowLeft' || e.key === 'PageUp') irTopico(S.pr.i - 1);
-      if (e.key === 'Escape') sairPregar();
+      if (e.key === 'Escape') {
+        sairPregar();
+        return;
+      } // não deixa o mesmo Esc fechar o resumo da pregação
     }
     if (e.key === 'Escape' && S.modal) {
       S.modal = null;

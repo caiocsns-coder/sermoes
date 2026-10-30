@@ -21,12 +21,14 @@ const GIS_FALSO = `window.google={accounts:{id:{
 }}};`;
 
 const srv = criarServidor(fs.readFileSync(path.join(root, 'src/Seed.gs'), 'utf8'));
-const ESPERA = 3300; // um pouco mais que o salvamento automático (2,5 s)
+const ESPERA = 3300;
+const foto = async (pg, nome) => { if (process.env.SHOTS) await pg.screenshot({ path: path.join(process.env.SHOTS, nome + '.png') }); }; // SHOTS=pasta npm test // um pouco mais que o salvamento automático (2,5 s)
 
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 1024, height: 900 }, serviceWorkers: 'block' });
   const p = await ctx.newPage();
+  await p.clock.install();
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   const falhar = async (msg, extra) => { console.error('FALHA: ' + msg, extra === undefined ? '' : extra); await b.close(); process.exit(1); };
   let ok = 0; const passou = () => ok++;
@@ -128,6 +130,14 @@ const ESPERA = 3300; // um pouco mais que o salvamento automático (2,5 s)
   await p.fill('[data-f="tema"]', 'Tema alterado no teste');
   await p.waitForTimeout(ESPERA);
   if (!/outro aparelho/.test(perguntou) || srv.DB[id].tema !== 'Tema alterado no teste') await falhar('conflito entre aparelhos', perguntou);
+  // a versão substituída fica em Versões e pode ser restaurada
+  await p.click('[data-a="versoes"]'); await p.waitForTimeout(300);
+  if (!/outro aparelho/.test(await p.locator('.md').innerText())) await falhar('versão substituída não aparece em Versões');
+  await foto(p, 'versoes');
+  p.once('dialog', d => d.accept());
+  await p.click('[data-a="restaurarVersao"][data-i="0"]'); await p.waitForTimeout(600);
+  if (await p.locator('[data-f="tema"]').inputValue() !== 'Servindo em Sua Casa até que Ele Venha' || srv.DB[id].tema !== 'Servindo em Sua Casa até que Ele Venha') await falhar('restaurar versão', srv.DB[id].tema);
+  if (!srv.HIST.some(h => h.motivo === 'antes de restaurar' && h.tema === 'Tema alterado no teste')) await falhar('versão atual não foi guardada antes de restaurar');
   passou();
 
   // 8) sessão vencida no servidor: pede login de novo e continua
@@ -166,11 +176,27 @@ const ESPERA = 3300; // um pouco mais que o salvamento automático (2,5 s)
   if (!(await p.locator('#toast.err').count()) || !/partes/.test(await p.locator('#toast').innerText())) await falhar('arquivo inválido não foi recusado');
   passou();
 
+  // lixeira: excluir com desfazer, excluir de novo e restaurar pela Lixeira
+  const cardImp = () => p.locator('.card', { hasText: 'Sermão importado no teste' });
+  await cardImp().locator('[data-a="excluir"]').click(); await p.waitForTimeout(500);
+  if (await cardImp().count()) await falhar('excluir sermão');
+  await p.click('#toast .undo'); await p.waitForTimeout(500);
+  if (!(await cardImp().count())) await falhar('desfazer exclusão');
+  await cardImp().locator('[data-a="excluir"]').click(); await p.waitForTimeout(500);
+  await p.click('[data-a="lixeira"]'); await p.waitForTimeout(300);
+  if (!/Sermão importado no teste/.test(await p.locator('.md').innerText()) || (await p.locator('.md .vr').count()) !== 1) await falhar('sermão não aparece (uma vez só) na Lixeira');
+  await foto(p, 'lixeira');
+  await p.click('[data-a="restaurarExcluido"][data-i="0"]'); await p.waitForTimeout(600);
+  if (!(await cardImp().count())) await falhar('restaurar da Lixeira');
+  await p.click('[data-a="backup"]'); await p.waitForTimeout(300);
+  if (!/Backup feito/.test(await p.locator('#toast').innerText())) await falhar('backup no Drive');
+  passou();
+
   // 11) sem internet: editar e criar sermão ficam no aparelho; ao voltar a conexão, tudo é enviado
   srv.estado.apiForaDoAr = true;
   await p.reload(); await p.waitForTimeout(800);
   if (!(await p.locator('.aviso').count()) || !(await p.locator('#res .card').count())) await falhar('lista do aparelho sem internet');
-  await p.locator('.card', { hasText: 'Tema alterado no teste' }).first().click(); await p.waitForTimeout(400);
+  await p.locator('.card', { hasText: 'Servindo em Sua Casa' }).first().click(); await p.waitForTimeout(400);
   await p.fill('[data-f="tema"]', 'Editado sem internet');
   await p.waitForTimeout(ESPERA);
   if (!/Salvo no aparelho/.test(await p.locator('#status').innerText())) await falhar('status sem internet', await p.locator('#status').innerText());
@@ -189,12 +215,27 @@ const ESPERA = 3300; // um pouco mais que o salvamento automático (2,5 s)
   await p.locator('.card', { hasText: 'Editado sem internet' }).first().click(); await p.waitForTimeout(400);
   await p.click('[data-a="pregar"]'); await p.waitForTimeout(700);
   const titulo = await p.locator('.pgt').innerText();
+  await p.clock.fastForward('02:00');
   await p.click('[data-a="pgIr"][data-v="1"]'); await p.waitForTimeout(300);
   if (!/de 7 min/.test(await p.locator('#tparte').innerText())) await falhar('tempo previsto da parte 2', await p.locator('#tparte').innerText());
+  await p.clock.fastForward('01:30');
+  await p.screenshot({ path: path.join(__dirname, '.pregar.png') });
+  passou();
+
+  // relatório da pregação: ao sair, o tempo real de cada parte fica registrado no sermão
+  await p.click('[data-a="sairPregar"]'); await p.waitForTimeout(300);
+  const resumo = await p.locator('.md').innerText();
+  await foto(p, 'resumo');
+  if (!/Pregação registrada/.test(resumo) || (await p.locator('.ptab tbody tr').count()) !== 7) await falhar('resumo da pregação', resumo.slice(0, 200));
+  await p.click('.md [data-a="fecharModal"]'); await p.waitForTimeout(ESPERA);
+  const sermao = Object.values(srv.DB).find(m => m.tema === 'Editado sem internet');
+  const reg = sermao && sermao.pregacoes && sermao.pregacoes[0];
+  if (!reg || reg.total < 200 || reg.partes[0].seg < 110 || reg.partes[1].seg < 85) await falhar('registro da pregação no servidor', reg);
+  if (!/pregado 1×/.test(await p.locator('#tlcap').innerText())) await falhar('legenda sem o registro da pregação');
+  await foto(p, 'legenda');
   passou();
 
   const banner = await p.locator('#erro-fatal').count();
-  await p.screenshot({ path: path.join(__dirname, '.pregar.png') });
   await b.close();
   if (errs.length || banner) { console.error('FALHA', errs); process.exit(1); }
   console.log('OK · ' + ok + ' verificações passaram · modo Pregar abriu em:', titulo);

@@ -4,17 +4,21 @@ const vm = require('vm');
 
 function criarServidor(seedCode) {
   const DB = {};
+  const HIST = []; // { ...sermão, guardado, motivo }
+  const guardar = (m, motivo) => HIST.push(Object.assign(JSON.parse(JSON.stringify(m)), { guardado: new Date(Date.now() + HIST.length).toISOString(), motivo }));
   const estado = { sessoes: new Set(), codigos: new Set(), apiForaDoAr: false, chamadas: [] };
 
   function salvarMensagem(msg) {
     const atual = msg.id && DB[msg.id];
-    if (atual && msg.atualizado && !msg._sobrescrever && atual.atualizado !== msg.atualizado)
+    const diferente = atual && msg.atualizado && atual.atualizado !== msg.atualizado;
+    if (diferente && !msg._sobrescrever)
       throw new Error('CONFLITO: este sermão foi alterado em outro aparelho em ' + atual.atualizado.slice(11, 16) + '.');
+    if (diferente) guardar(atual, 'substituída por outro aparelho');
     const id = msg.id || ('id' + Math.random().toString(36).slice(2, 8));
     const at = new Date(Date.now() + Object.keys(DB).length).toISOString();
     DB[id] = { id, tema: msg.tema, pasta: msg.pasta, tempo: msg.tempo, eventos: msg.eventos || [],
       topicos: (msg.topicos || []).map(t => { const p = { titulo: t.titulo, blocos: t.blocos }; if (Number(t.tempo) > 0) p.tempo = Number(t.tempo); return p; }),
-      atualizado: at };
+      pregacoes: (msg.pregacoes || []).slice(-20), atualizado: at };
     return { id, atualizado: at };
   }
   const API = {
@@ -23,8 +27,23 @@ function criarServidor(seedCode) {
       .sort((a, b) => (a.atualizado < b.atualizado ? 1 : -1)),
     obterMensagem: id => { if (!DB[id]) throw new Error('Sermão não encontrado.'); return JSON.parse(JSON.stringify(DB[id])); },
     salvarMensagem,
-    excluirMensagem: id => { delete DB[id]; return true; },
-    duplicarMensagem: id => { const m = JSON.parse(JSON.stringify(DB[id])); m.id = ''; m.tema += ' (cópia)'; return salvarMensagem(m); },
+    excluirMensagem: id => { if (DB[id]) guardar(DB[id], 'excluído'); delete DB[id]; return true; },
+    duplicarMensagem: id => { const m = JSON.parse(JSON.stringify(DB[id])); m.id = ''; m.tema += ' (cópia)'; m.pregacoes = []; return salvarMensagem(m); },
+    listarVersoes: id => HIST.filter(h => h.id === id && h.motivo !== 'excluído').map(h => ({ id: h.id, tema: h.tema, atualizado: h.atualizado, guardado: h.guardado, motivo: h.motivo, nTopicos: h.topicos.length })).reverse(),
+    restaurarVersao: (id, guardado) => {
+      const v = HIST.find(h => h.id === id && h.guardado === guardado); if (!v) throw new Error('Versão não encontrada.');
+      if (DB[id]) guardar(DB[id], 'antes de restaurar');
+      const at = new Date().toISOString(); DB[id] = Object.assign(JSON.parse(JSON.stringify(v)), { atualizado: at }); delete DB[id].guardado; delete DB[id].motivo;
+      return { id, atualizado: at };
+    },
+    listarExcluidos: () => { const vistos = {}; HIST.filter(h => h.motivo === 'excluído' && !DB[h.id]).forEach(h => { vistos[h.id] = { id: h.id, tema: h.tema, guardado: h.guardado, nTopicos: h.topicos.length }; }); return Object.values(vistos).reverse(); },
+    restaurarExcluido: id => {
+      if (DB[id]) throw new Error('Este sermão já está na lista.');
+      const v = HIST.filter(h => h.motivo === 'excluído' && h.id === id).pop(); if (!v) throw new Error('Sermão não encontrado na lixeira.');
+      const at = new Date().toISOString(); DB[id] = Object.assign(JSON.parse(JSON.stringify(v)), { atualizado: at }); delete DB[id].guardado; delete DB[id].motivo;
+      return { id, atualizado: at };
+    },
+    fazerBackup: () => ({ pasta: 'Sermões · backups / teste', sermoes: Object.keys(DB).length, url: '' }),
     listarEventos: () => [{ id: 'e1', titulo: 'Culto Divino · 174 anos ES', data: '2026-10-24T12:00:00Z' }, { id: 'e2', titulo: 'Reunião de professores', data: '2026-10-27T22:00:00Z' }],
     enviarImagem: () => 'https://example.com/x.jpg',
     buscarVersiculo: (ref, versao) => {
@@ -66,6 +85,6 @@ function criarServidor(seedCode) {
       return { ok: true, data: API[req.fn].apply(null, req.args || []) };
     } catch (e) { return { ok: false, erro: e.message }; }
   }
-  return { DB, estado, responder };
+  return { DB, HIST, estado, responder };
 }
 module.exports = { criarServidor };
