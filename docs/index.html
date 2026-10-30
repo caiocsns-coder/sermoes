@@ -276,6 +276,16 @@ body:has(.pg) #toast{bottom:auto;top:76px}
 .chip2.on{border-color:var(--ac);color:var(--ac)}
 .link.inl{min-height:0;padding:0;font-size:inherit}
 .ml .pfoot{padding:4px 12px 8px}
+.hcfg{display:flex;flex-direction:column;gap:14px;padding:14px 16px 16px}
+.hcfg p{margin:0;line-height:1.5}
+.hcfg .chk{align-items:flex-start;line-height:1.4}
+.hcfg .chk input{margin-top:2px;flex:none}
+.hbtn{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hbtn .ok{color:#7fd6a5}
+.hbtn .err{color:var(--dan)}
+.hlimpar{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 14px;margin-right:6px;border-radius:22px;border:1px solid var(--ac2);color:var(--ac);font-size:14px;font-weight:700;white-space:nowrap}
+.hproj{display:inline-flex;align-items:center;gap:6px;margin-left:.8em;padding:.25em .7em;border-radius:999px;border:1px solid var(--ac2);color:var(--ac);font-size:.55em;font-weight:700;vertical-align:middle;letter-spacing:0}
+.r-cit .hproj{float:right;margin:0 0 .3em .6em;font-size:.5em}
 .cod{padding:18px 22px 22px;text-align:center}
 .cod p{margin:0;line-height:1.5}
 .codigo{font-family:var(--fd);font-size:46px;font-weight:700;letter-spacing:.1em;font-variant-numeric:tabular-nums;margin:14px 0 10px;color:var(--ac)}
@@ -307,7 +317,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
   .tparte{order:9;flex-basis:100%;font-size:13px}
   .timer small{font-size:13px}
   .pgbar{padding:calc(12px + env(safe-area-inset-top)) 14px 12px}
-  .pgbar:has(.telec) .pgtema{display:none}
+  .pgbar:has(.telec) .pgtema,.pgbar:has(.hlimpar) .pgtema{display:none}
   .telec{margin-right:auto;border-right:0;padding-right:0}
   .pgc{font-size:calc(21px*var(--fs))}
   .pgf{padding:14px}
@@ -377,6 +387,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
     scroll: '<path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v3h4"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M14 8h-4"/><path d="M15 12h-5"/>',
     pause: '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+    cast: '<path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M2 12a9 9 0 0 1 8 8"/><path d="M2 16a5 5 0 0 1 4 4"/><line x1="2" y1="20" x2="2.01" y2="20"/>',
     history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
     archive: '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
     cloud: '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
@@ -901,7 +912,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
   const chaveItem = m => m.id || m._local;
   function vConta() {
     const s = lerSessao();
-    return "<footer class=\"conta\">\n    <span>" + (s && s.email ? 'Conectado como ' + esc(s.email) : 'Conta') + "</span>\n    <button class=\"link\" data-a=\"lixeira\">" + ic('archive', 15) + " Lixeira</button>\n    <button class=\"link\" data-a=\"backup\">" + ic('cloud', 15) + " Backup no Drive agora</button>\n    <button class=\"link\" data-a=\"parear\">" + ic('phone', 15) + " Conectar outro aparelho</button>\n    <button class=\"link\" data-a=\"sair\">" + ic('logout', 15) + " Sair deste aparelho</button>\n  </footer>";
+    return "<footer class=\"conta\">\n    <span>" + (s && s.email ? 'Conectado como ' + esc(s.email) : 'Conta') + "</span>\n    <button class=\"link\" data-a=\"lixeira\">" + ic('archive', 15) + " Lixeira</button>\n    <button class=\"link\" data-a=\"backup\">" + ic('cloud', 15) + " Backup no Drive agora</button>\n    <button class=\"link\" data-a=\"holyrics\">" + ic('cast', 15) + " Holyrics" + (hol().ativo ? ' (ligado)' : '') + "</button>\n    <button class=\"link\" data-a=\"parear\">" + ic('phone', 15) + " Conectar outro aparelho</button>\n    <button class=\"link\" data-a=\"sair\">" + ic('logout', 15) + " Sair deste aparelho</button>\n  </footer>";
   }
   function acoesCard(m) {
     if (!m.id) return '';
@@ -1062,16 +1073,19 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       };
     const prox = m.topicos[i + 1],
       prev = S.pr.prev;
-    return "\n  <div class=\"pg\" style=\"--fs:" + S.pr.fs + "\">\n    <header class=\"pgbar\">\n      <button class=\"ic fill\" data-a=\"sairPregar\" title=\"Sair\" aria-label=\"Sair do modo Pregar\">" + ic('x', 20) + "</button>\n      <div class=\"pgtema\">" + esc(m.tema) + "</div>\n      " + (tele(m) ? "<div class=\"telec\">\n        <button class=\"ic fill\" data-a=\"teleRolar\" id=\"telebtn\" title=\"Pausar ou continuar a rolagem\" aria-label=\"Pausar ou continuar a rolagem\">" + ic(S.pr.tele.rodando ? 'pause' : 'play', 16) + "</button>\n        <button class=\"ic fill fs\" data-a=\"teleVel\" data-v=\"-1\" title=\"Rolagem mais lenta\" aria-label=\"Rolagem mais lenta\">\u2212</button>\n        <span class=\"televel\" id=\"televel\">" + S.pr.tele.fator.toFixed(1).replace('.', ',') + "\xD7</span>\n        <button class=\"ic fill fs\" data-a=\"teleVel\" data-v=\"1\" title=\"Rolagem mais r\xE1pida\" aria-label=\"Rolagem mais r\xE1pida\">+</button>\n      </div>" : '') + "\n      <button class=\"ic fill fs\" data-a=\"fonte\" data-v=\"-1\" title=\"Diminuir letra\" aria-label=\"Diminuir letra\">A\u2212</button>\n      <button class=\"ic fill fs\" data-a=\"fonte\" data-v=\"1\" title=\"Aumentar letra\" aria-label=\"Aumentar letra\">A+</button>\n    </header>\n    <main class=\"pgc " + (tele(m) ? 'tele' : '') + "\" id=\"pgc\">\n      <div class=\"pgk\">Parte " + (i + 1) + " de " + n + "</div>\n      <h1 class=\"pgt\">" + esc(t.titulo || 'Parte ' + (i + 1)) + "</h1>\n      " + t.blocos.map(vLeitura).join('') + "\n    </main>\n    <footer class=\"pgf\">\n      <div class=\"seg\">\n        " + m.topicos.map((tp, k) => "<button class=\"" + (k < i ? 'feito' : k === i ? 'on' : '') + "\" style=\"flex:" + Math.max(0.5, prev[k] ? prev[k].min : 1) + "\" data-a=\"pgIr\" data-v=\"" + k + "\" title=\"" + esc(tp.titulo || 'Parte ' + (k + 1)) + "\">" + (k === i ? k + 1 + ' · ' + esc(tp.titulo || 'Parte ' + (k + 1)) : k + 1) + "</button>").join('') + "\n        <span id=\"playhead\"></span>\n      </div>\n      <div class=\"pgnav\">\n        <button class=\"timer\" id=\"timer\" data-a=\"timer\" title=\"Pausar / continuar\" aria-label=\"Pausar ou continuar o cron\xF4metro\"></button>\n        <span class=\"tparte\" id=\"tparte\"></span>\n        <div class=\"sp\"></div>\n        <button class=\"pv\" data-a=\"pgIr\" data-v=\"" + (i - 1) + "\" " + (i === 0 ? 'disabled' : '') + " aria-label=\"Parte anterior\">" + ic('chevL', 22) + "</button>\n        <button class=\"nx\" data-a=\"pgIr\" data-v=\"" + (i + 1) + "\" " + (prox ? '' : 'disabled') + "><span>" + (prox ? esc(prox.titulo || 'Parte ' + (i + 2)) : 'Última parte') + "</span>" + ic('chevR', 20) + "</button>\n      </div>\n    </footer>\n  </div>";
+    return "\n  <div class=\"pg\" style=\"--fs:" + S.pr.fs + "\">\n    <header class=\"pgbar\">\n      <button class=\"ic fill\" data-a=\"sairPregar\" title=\"Sair\" aria-label=\"Sair do modo Pregar\">" + ic('x', 20) + "</button>\n      <div class=\"pgtema\">" + esc(m.tema) + "</div>\n      " + (tele(m) ? "<div class=\"telec\">\n        <button class=\"ic fill\" data-a=\"teleRolar\" id=\"telebtn\" title=\"Pausar ou continuar a rolagem\" aria-label=\"Pausar ou continuar a rolagem\">" + ic(S.pr.tele.rodando ? 'pause' : 'play', 16) + "</button>\n        <button class=\"ic fill fs\" data-a=\"teleVel\" data-v=\"-1\" title=\"Rolagem mais lenta\" aria-label=\"Rolagem mais lenta\">\u2212</button>\n        <span class=\"televel\" id=\"televel\">" + S.pr.tele.fator.toFixed(1).replace('.', ',') + "\xD7</span>\n        <button class=\"ic fill fs\" data-a=\"teleVel\" data-v=\"1\" title=\"Rolagem mais r\xE1pida\" aria-label=\"Rolagem mais r\xE1pida\">+</button>\n      </div>" : '') + "\n      " + (hol().ativo ? "<button class=\"hlimpar\" data-a=\"hLimpar\" title=\"Tirar a proje\xE7\xE3o do Holyrics\">" + ic('cast', 15) + " Limpar tela</button>" : '') + "\n      <button class=\"ic fill fs\" data-a=\"fonte\" data-v=\"-1\" title=\"Diminuir letra\" aria-label=\"Diminuir letra\">A\u2212</button>\n      <button class=\"ic fill fs\" data-a=\"fonte\" data-v=\"1\" title=\"Aumentar letra\" aria-label=\"Aumentar letra\">A+</button>\n    </header>\n    <main class=\"pgc " + (tele(m) ? 'tele' : '') + "\" id=\"pgc\">\n      <div class=\"pgk\">Parte " + (i + 1) + " de " + n + "</div>\n      <h1 class=\"pgt\">" + esc(t.titulo || 'Parte ' + (i + 1)) + "</h1>\n      " + t.blocos.map((b, k) => vLeitura(b, k)).join('') + "\n    </main>\n    <footer class=\"pgf\">\n      <div class=\"seg\">\n        " + m.topicos.map((tp, k) => "<button class=\"" + (k < i ? 'feito' : k === i ? 'on' : '') + "\" style=\"flex:" + Math.max(0.5, prev[k] ? prev[k].min : 1) + "\" data-a=\"pgIr\" data-v=\"" + k + "\" title=\"" + esc(tp.titulo || 'Parte ' + (k + 1)) + "\">" + (k === i ? k + 1 + ' · ' + esc(tp.titulo || 'Parte ' + (k + 1)) : k + 1) + "</button>").join('') + "\n        <span id=\"playhead\"></span>\n      </div>\n      <div class=\"pgnav\">\n        <button class=\"timer\" id=\"timer\" data-a=\"timer\" title=\"Pausar / continuar\" aria-label=\"Pausar ou continuar o cron\xF4metro\"></button>\n        <span class=\"tparte\" id=\"tparte\"></span>\n        <div class=\"sp\"></div>\n        <button class=\"pv\" data-a=\"pgIr\" data-v=\"" + (i - 1) + "\" " + (i === 0 ? 'disabled' : '') + " aria-label=\"Parte anterior\">" + ic('chevL', 22) + "</button>\n        <button class=\"nx\" data-a=\"pgIr\" data-v=\"" + (i + 1) + "\" " + (prox ? '' : 'disabled') + "><span>" + (prox ? esc(prox.titulo || 'Parte ' + (i + 2)) : 'Última parte') + "</span>" + ic('chevR', 20) + "</button>\n      </div>\n    </footer>\n  </div>";
   }
-  function vLeitura(b) {
+
+  /* botão discreto "Projetar" (só com o Holyrics ligado neste aparelho; tocar no texto não projeta) */
+  const vProjetar = k => hol().ativo && S.view === 'pregar' ? "<button class=\"hproj\" data-a=\"hProjetar\" data-k=\"" + k + "\" title=\"Projetar no Holyrics\">" + ic('cast', 14) + " Projetar</button>" : '';
+  function vLeitura(b, k) {
     switch (b.tipo) {
       case 'biblico':
-        return "<div class=\"r-bib\"><div class=\"r-ref\">" + esc(b.ref) + (b.versao ? "<span>" + esc(b.versao) + "</span>" : '') + "</div><p>" + esc(b.texto) + "</p>" + (b.copyright ? "<small class=\"r-copy\">" + esc(b.copyright) + "</small>" : '') + "</div>";
+        return "<div class=\"r-bib\"><div class=\"r-ref\">" + esc(b.ref) + (b.versao ? "<span>" + esc(b.versao) + "</span>" : '') + (b.ref ? vProjetar(k) : '') + "</div><p>" + esc(b.texto) + "</p>" + (b.copyright ? "<small class=\"r-copy\">" + esc(b.copyright) + "</small>" : '') + "</div>";
       case 'lista':
         return "<ul class=\"r-list\">" + (b.itens || []).filter(x => x.trim()).map(x => "<li>" + esc(x) + "</li>").join('') + "</ul>";
       case 'citacao':
-        return "<blockquote class=\"r-cit\"><p>\u201C" + esc(b.texto) + "\u201D</p>" + (b.fonte || aConferir(b) ? "<cite>" + esc(b.fonte) + (aConferir(b) ? '<span class="r-conf">conferir</span>' : '') + "</cite>" : '') + "</blockquote>";
+        return "<blockquote class=\"r-cit\">" + (b.texto ? vProjetar(k) : '') + "<p>\u201C" + esc(b.texto) + "\u201D</p>" + (b.fonte || aConferir(b) ? "<cite>" + esc(b.fonte) + (aConferir(b) ? '<span class="r-conf">conferir</span>' : '') + "</cite>" : '') + "</blockquote>";
       case 'imagem':
         return b.url ? "<figure class=\"r-img\"><img src=\"" + esc(b.url) + "\" alt=\"\">" + (b.legenda ? "<figcaption>" + esc(b.legenda) + "</figcaption>" : '') + "</figure>" : '';
       case 'obs':
@@ -1088,6 +1102,10 @@ body:has(.pg) #toast{bottom:auto;top:76px}
   const vCaixa = (titulo, corpo) => "\n  <div class=\"ov\" data-a=\"fecharModal\">\n    <div class=\"md\">\n      <div class=\"mh\"><b>" + titulo + "</b><button class=\"ic\" data-a=\"fecharModal\" aria-label=\"Fechar\">" + ic('x') + "</button></div>\n      <div class=\"ml\">" + corpo + "</div>\n    </div>\n  </div>";
   function vModalExtra() {
     const md = S.modal;
+    if (md.tipo === 'holyrics') {
+      const h = hol();
+      return vCaixa('Holyrics', "<div class=\"hcfg\">\n      <p>Projeta vers\xEDculos e cita\xE7\xF5es a partir do modo Pregar e mostra o tempo no tel\xE3o de retorno. Vale s\xF3 para <b>este aparelho</b>: ligue no culto em que voc\xEA for usar.</p>\n      <label class=\"chk\"><input type=\"checkbox\" data-hol=\"ativo\" " + (h.ativo ? 'checked' : '') + "><span>Projetar pelo app neste aparelho (bot\xE3o <b>Projetar</b> em cada vers\xEDculo e cita\xE7\xE3o)</span></label>\n      <label class=\"chk\"><input type=\"checkbox\" data-hol=\"telao\" " + (h.telao ? 'checked' : '') + " " + (h.ativo ? '' : 'disabled') + "><span>Tel\xE3o de retorno: contagem do serm\xE3o e parte atual no painel de comunica\xE7\xE3o</span></label>\n      <div class=\"hbtn\"><button class=\"btn\" data-a=\"hTestar\">Testar conex\xE3o</button><span id=\"hres\" class=\"muted\"></span></div>\n      <p class=\"muted\">Precisa do Holyrics aberto e com internet no computador da igreja, e das propriedades HOLYRICS_API_KEY e HOLYRICS_TOKEN no Apps Script (veja o README). Combine com quem opera a m\xEDdia: um toque em Projetar muda a tela do culto.</p>\n    </div>");
+    }
     if (md.tipo === 'versoes') return vCaixa('Versões anteriores', md.itens === null ? '<p class="muted">Carregando…</p>' : md.itens.length ? md.itens.map((v, i) => "<div class=\"vr\"><div><b>" + fmtDataHoraAno(v.atualizado) + "</b><small>" + esc(MOTIVOS[v.motivo] || v.motivo) + " \xB7 " + esc(v.tema || 'Sem tema') + " \xB7 " + plural(v.nTopicos, 'parte', 'partes') + "</small></div><button class=\"btn\" data-a=\"restaurarVersao\" data-i=\"" + i + "\">Restaurar</button></div>").join('') + '<p class="muted">O app guarda o estado anterior a cada nova sessão de edição, até 15 versões.</p>' : '<p class="muted">Ainda não há versões anteriores. Elas aparecem depois que você voltar a editar este sermão em outro momento (30 min depois do último salvamento).</p>');
     if (md.tipo === 'lixeira') return vCaixa('Lixeira', md.itens === null ? '<p class="muted">Carregando…</p>' : md.itens.length ? md.itens.map((v, i) => "<div class=\"vr\"><div><b>" + esc(v.tema || 'Sem tema') + "</b><small>exclu\xEDdo em " + fmtDataHoraAno(v.guardado) + " \xB7 " + plural(v.nTopicos, 'parte', 'partes') + "</small></div><button class=\"btn\" data-a=\"restaurarExcluido\" data-i=\"" + i + "\">Restaurar</button></div>").join('') + '<p class="muted">Sermões excluídos ficam aqui por 60 dias.</p>' : '<p class="muted">A lixeira está vazia.</p>');
     if (md.tipo === 'pregacao') {
@@ -1682,6 +1700,55 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       tp.className = 'tparte' + (prev && sp > prev * 60 ? ' warn' : '');
     }
   }
+  /* ======================= Holyrics ======================= */
+  /* ligado por aparelho (quem opera o Holyrics varia): localStorage sermoes.holyrics = { ativo, telao } */
+  const CHAVE_HOL = 'sermoes.holyrics';
+  const hol = () => local.ler(CHAVE_HOL) || {
+    ativo: false,
+    telao: false
+  };
+  /* sem esperar: a projeção não pode travar a pregação; erro vira aviso */
+  function enviarHolyrics(acao, dados, aviso) {
+    run('projetarHolyrics', acao, dados || {}).then(() => {
+      if (aviso) toast(aviso);
+    }).catch(falha);
+  }
+  const textoTelao = () => {
+    const m = S.msg,
+      i = S.pr.i,
+      t = m.topicos[i],
+      prox = m.topicos[i + 1];
+    return 'Parte ' + (i + 1) + ' de ' + m.topicos.length + ' · ' + (t.titulo || 'Parte ' + (i + 1)) + (prox ? '\nPróxima: ' + (prox.titulo || 'Parte ' + (i + 2)) : '\nÚltima parte');
+  };
+  function telaoInicio() {
+    if (!hol().ativo || !hol().telao) return;
+    const seg = (S.msg.tempo || 30) * 60;
+    enviarHolyrics('StartCountdownCP', {
+      minutes: S.msg.tempo || 30,
+      seconds: 0,
+      yellow_starts_at: Math.round(seg * 0.15),
+      stop_at_zero: false
+    });
+    enviarHolyrics('SetTextCP', {
+      text: textoTelao(),
+      show: true
+    });
+  }
+  function telaoParte() {
+    if (hol().ativo && hol().telao) enviarHolyrics('SetTextCP', {
+      text: textoTelao(),
+      show: true
+    });
+  }
+  function telaoFim() {
+    if (!hol().ativo || !hol().telao) return;
+    enviarHolyrics('StopCountdownCP', {});
+    enviarHolyrics('SetTextCP', {
+      text: '',
+      show: false
+    });
+  }
+
   /* ======================= teleprompter ======================= */
   /* velocidade: a distância a rolar dividida pelos segundos previstos para a parte, vezes o fator (0,5× a 2×).
    * Para quando o cronômetro está pausado, quando a rolagem foi pausada e por 4 s depois de um toque ou rolagem manual. */
@@ -1734,6 +1801,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       S.pr.tele.pausaAte = Date.now() + 3000;
       requestAnimationFrame(teleQuadro);
     } // 3 s para começar
+    telaoInicio();
     manterTela().then(ok => {
       if (!ok && !S.avisouTela) {
         S.avisouTela = true;
@@ -1767,6 +1835,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
     return reg;
   }
   function sairPregar() {
+    telaoFim();
     clearInterval(S.timerId);
     soltarTela();
     S.view = 'editor';
@@ -1793,6 +1862,7 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       S.pr.tele.acc = 0;
       S.pr.tele.pausaAte = Date.now() + 2000;
     } // respiro no começo da parte
+    telaoParte();
   }
 
   /* ======================= eventos ======================= */
@@ -1811,6 +1881,48 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       [arr[i], arr[j]] = [arr[j], arr[i]];
     };
     switch (a) {
+      case 'holyrics':
+        S.modal = {
+          tipo: 'holyrics'
+        };
+        render();
+        break;
+      case 'hTestar':
+        {
+          const r = document.getElementById('hres');
+          if (r) {
+            r.className = 'muted';
+            r.textContent = 'Testando…';
+          }
+          try {
+            await run('testarHolyrics');
+            if (r) {
+              r.className = 'ok';
+              r.textContent = 'Conectado, com todas as permissões.';
+            }
+          } catch (err) {
+            if (r) {
+              r.className = 'err';
+              r.textContent = textoErro(err);
+            }
+          }
+          break;
+        }
+      case 'hProjetar':
+        {
+          const b = m.topicos[S.pr.i].blocos[+el.dataset.k];
+          if (b.tipo === 'biblico') enviarHolyrics('ShowVerse', {
+            references: b.ref,
+            version: b.versao || undefined,
+            quick_presentation: true
+          }, 'Projetando ' + b.ref);else enviarHolyrics('ShowQuickPresentation', {
+            text: b.texto + (b.fonte ? '\n\n— ' + b.fonte.replace(/\s*\([^)]*\)\s*$/, '') : '')
+          }, 'Projetando a citação');
+          break;
+        }
+      case 'hLimpar':
+        enviarHolyrics('CloseCurrentPresentation', {}, 'Projeção encerrada');
+        break;
       case 'lixeira':
         S.modal = {
           tipo: 'lixeira',
@@ -2406,6 +2518,15 @@ body:has(.pg) #toast{bottom:auto;top:76px}
       r.readAsDataURL(file);
     });
   }
+  document.addEventListener('change', e => {
+    const k = e.target && e.target.dataset && e.target.dataset.hol;
+    if (!k) return;
+    const h = hol();
+    h[k] = e.target.checked;
+    if (!h.ativo) h.telao = false;
+    local.gravar(CHAVE_HOL, h);
+    render();
+  });
 
   /* atalhos de teclado */
   document.addEventListener('keydown', e => {

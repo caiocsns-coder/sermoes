@@ -6,7 +6,7 @@ function criarServidor(seedCode) {
   const DB = {};
   const HIST = []; // { ...sermão, guardado, motivo }
   const guardar = (m, motivo) => HIST.push(Object.assign(JSON.parse(JSON.stringify(m)), { guardado: new Date(Date.now() + HIST.length).toISOString(), motivo }));
-  const estado = { sessoes: new Set(), codigos: new Set(), apiForaDoAr: false, chamadas: [] };
+  const estado = { sessoes: new Set(), codigos: new Set(), apiForaDoAr: false, chamadas: [], holyrics: [] };
 
   function salvarMensagem(msg) {
     const atual = msg.id && DB[msg.id];
@@ -44,6 +44,8 @@ function criarServidor(seedCode) {
       return { id, atualizado: at };
     },
     fazerBackup: () => ({ pasta: 'Sermões · backups / teste', sermoes: Object.keys(DB).length, url: '' }),
+    projetarHolyrics: (acao, dados) => { estado.holyrics.push({ acao, dados }); return true; },
+    testarHolyrics: () => ({ ok: true }),
     listarEventos: () => [{ id: 'e1', titulo: 'Culto Divino · 174 anos ES', data: '2026-10-24T12:00:00Z' }, { id: 'e2', titulo: 'Reunião de professores', data: '2026-10-27T22:00:00Z' }],
     enviarImagem: () => 'https://example.com/x.jpg',
     buscarVersiculo: (ref, versao) => {

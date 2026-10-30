@@ -64,4 +64,8 @@ Troque `USUARIO` pelo seu usuário do GitHub e `sermoes` pelo nome do repositór
 - **Backup ou compartilhar um sermão:** no editor, toque no ícone de download. No iPad abre a folha de compartilhamento (Salvar em Arquivos, AirDrop…).
 - **Backup automático:** execute `instalarBackupSemanal` uma vez no editor do Apps Script. Toda segunda às 4h, cada sermão vira um `.sermao.json` em "Sermões · backups" no Drive (ficam as 8 últimas semanas). Para restaurar um, importe o arquivo pelo app.
 - **Voltar uma versão ou recuperar um sermão excluído:** no editor, use a pílula **Versões**; na lista, use **Lixeira** no rodapé.
+- **Holyrics (opcional):**
+  1. No computador da igreja, no Holyrics: **Arquivo → Configurações → API Server**. Ative o servidor, copie a **API_KEY** e, em "gerenciar permissões", crie um token só com `ShowVerse`, `ShowQuickPresentation`, `CloseCurrentPresentation`, `SetTextCP`, `StartCountdownCP` e `StopCountdownCP`.
+  2. No Apps Script, cadastre `HOLYRICS_API_KEY` e `HOLYRICS_TOKEN` nas Propriedades do script.
+  3. No app, no rodapé da lista, toque em **Holyrics**, ligue neste aparelho e use **Testar conexão**.
 - **Perdeu um aparelho:** execute `encerrarTodasAsSessoes` no editor do Apps Script. Todos os aparelhos vão pedir login de novo.

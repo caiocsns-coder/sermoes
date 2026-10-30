@@ -67,7 +67,7 @@ No editor do Apps Script ficam só **Código.gs** (ou Code.gs) e **Seed.gs**. O 
      - `entrarComCodigo` troca o código por uma sessão de 30 dias;
      - limite: 10 códigos errados a cada 10 minutos; depois disso, bloqueia por 10 minutos.
   7. `sair` apaga a sessão do aparelho. Para derrubar todas as sessões (por exemplo, se perder o iPad), rode `encerrarTodasAsSessoes()` no editor.
-- **Propriedades do script:** `GOOGLE_CLIENT_ID` (obrigatória), `DONO_EMAIL` (opcional), `APP_URL` (opcional, link mostrado por quem abrir o `/exec`), `YOUVERSION_KEY`, `PLANILHA_ID` (criada sozinha) e `sessao_…` (criadas sozinhas).
+- **Propriedades do script:** `HOLYRICS_API_KEY` e `HOLYRICS_TOKEN` (opcionais, para o Holyrics), `GOOGLE_CLIENT_ID` (obrigatória), `DONO_EMAIL` (opcional), `APP_URL` (opcional, link mostrado por quem abrir o `/exec`), `YOUVERSION_KEY`, `PLANILHA_ID` (criada sozinha) e `sessao_…` (criadas sozinhas).
 - **Sem internet (no aparelho):**
   - o service worker guarda as telas, o manifesto, os ícones e as fontes;
   - a página guarda no `localStorage` a lista (`sermoes.lista`), cada sermão aberto (`sermoes.msg.<id>`) e as pendências (`sermoes.pend`). No máximo 40 sermões (`MAX_CACHE`, os usados mais recentemente, controlados em `sermoes.uso`); pendentes nunca são apagados. Se o espaço acabar, `liberarEspaco()` apaga os 10 menos usados e tenta de novo;
@@ -182,6 +182,21 @@ A opção recomendada é guardar **um arquivo `.json` por sermão** numa pasta "
   - Google Docs como banco: o formato é frágil.
   - Banco externo (Firebase/Supabase): só faz sentido se um dia houver multiusuário.
 
+## Holyrics (projeção e telão de retorno, out/2026)
+
+- **Caminho:** página → `doPost` (`projetarHolyrics`) → `https://api.holyrics.com.br/send/{ação}` (cabeçalhos `api_key` e `token`) → Holyrics aberto no computador da igreja. A rede local do Holyrics (`http://IP:porta`) não serve, porque uma página `https` não pode chamar `http`.
+- **Ações permitidas** (`HOLYRICS_ACOES`): `ShowVerse` (com `references`, `version`, `quick_presentation: true`), `ShowQuickPresentation` (citação com a fonte), `CloseCurrentPresentation`, `SetTextCP`, `StartCountdownCP`, `StopCountdownCP`. O token criado no Holyrics deve ter só essas permissões.
+- **Ligado por aparelho**, não por sermão, porque quem opera o Holyrics varia: `localStorage` `sermoes.holyrics = { ativo, telao }`, configurado pelo "Holyrics" do rodapé da lista, com "Testar conexão".
+- **No modo Pregar** (com `ativo`):
+  - botão discreto "Projetar" ao lado da referência de cada versículo e em cada citação (tocar no texto não projeta);
+  - "Limpar tela" na barra (`CloseCurrentPresentation`);
+  - os envios não travam a tela: erro vira aviso.
+- **Telão de retorno** (com `telao`):
+  - ao entrar no Pregar: contagem do tempo-alvo no painel de comunicação (amarela nos últimos 15%) e o texto "Parte N de M · título / Próxima: …";
+  - ao trocar de parte, o texto atualiza; ao sair, a contagem para e o texto some;
+  - a pausa do cronômetro do app não pausa a contagem do Holyrics.
+- **A Bíblia projetada é a instalada no Holyrics:** a versão (NBV, NVI…) precisa existir lá com esse nome ou abreviação.
+
 ## Arquivo .sermao.json (importar e exportar)
 
 Formato de troca de sermões entre o app, backups e o Claude (skill `exportar-sermao-app`). Não passa pelo servidor: a página lê e grava o arquivo, e o salvamento normal (`salvarMensagem`) cuida do resto.
@@ -229,6 +244,8 @@ Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodada
 | `listarExcluidos()` | igual a `listarVersoes` | lixeira (só sermões que não voltaram para a lista) |
 | `restaurarExcluido(id)` | `{id, atualizado}` | devolve o sermão excluído para a lista |
 | `fazerBackup()` | `{pasta, sermoes, url}` | backup imediato no Drive (o mesmo do `backupSemanal`) |
+| `projetarHolyrics(acao, dados)` | `true` | envia ao Holyrics sem esperar resposta; só as ações de `HOLYRICS_ACOES` |
+| `testarHolyrics()` | `{ok, acoes}` | confere conexão e permissões do token (`CheckPermissions`) |
 | `buscarVersiculo(ref, versao)` | `{texto, referencia, versao, copyright}` | **nova (out/2026)**; busca o texto no YouVersion Platform. Lança um erro em português quando a referência não é entendida, a versão não está no catálogo ou ainda não tem licença |
 
 **Escopos pedidos na primeira execução:** Planilhas, Drive, Agenda e "conectar a serviço externo" (`UrlFetchApp`, para o YouVersion e para conferir o login no Google). Não há `oauthScopes` no manifesto: o Apps Script detecta os escopos sozinho. A imagem é reduzida no navegador para no máximo 1600 px, em JPEG com qualidade 0.85, antes do envio.
@@ -355,7 +372,7 @@ npm test                    # build + teste de ponta a ponta no Chromium, com AP
                             # cobre: login, código de pareamento, inserir blocos (3 jeitos), citações de Ellen White, busca de versículo, seleção, desfazer,
                             # tempo por parte, salvamento automático, conflito, sessão vencida,
                             # busca na lista, importar/exportar .sermao.json, versões, lixeira, backup,
-                            # relatório da pregação,
+                            # relatório da pregação, teleprompter, Holyrics (projetar e telão),
                             # modo sem internet (editar, criar e sincronizar) e Pregar
 git add -A && git commit -m "…" && git push   # o GitHub Pages publica docs/ em cerca de 1 minuto
 ```

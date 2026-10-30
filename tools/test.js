@@ -1,7 +1,7 @@
 // Teste de fumaça: abre docs/index.html como se estivesse no GitHub Pages (https://app.test/),
 // com a API simulada (tools/mock-server.js + src/Seed.gs) e o login do Google simulado.
 // Cobre: login, código de pareamento (app instalado), inserir blocos, citações de Ellen White, busca de versículo, seleção, desfazer, tempo por parte,
-// salvamento automático, conflito, sessão vencida, busca na lista, importar/exportar, modo sem internet e Pregar.
+// salvamento automático, conflito, sessão vencida, busca na lista, importar/exportar, modo sem internet, Pregar e Holyrics.
 const fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
 const { criarServidor } = require('./mock-server');
@@ -280,6 +280,33 @@ const foto = async (pg, nome) => { if (process.env.SHOTS) await pg.screenshot({ 
   if (!sermao.opcoes || sermao.opcoes.teleprompter !== true) await falhar('preferência do teleprompter não foi salva', sermao.opcoes);
   if (!/pregado 1×/.test(await p.locator('#tlcap').innerText())) await falhar('legenda sem o registro da pregação');
   await foto(p, 'legenda');
+  passou();
+
+  // Holyrics: ligado neste aparelho; telão de retorno; projetar versículo e citação; limpar; sair
+  await p.click('[data-a="voltar"]'); await p.waitForTimeout(400);
+  await p.click('[data-a="holyrics"]'); await p.waitForTimeout(200);
+  await p.check('[data-hol="ativo"]'); await p.waitForTimeout(100); await p.check('[data-hol="telao"]');
+  await p.click('[data-a="hTestar"]'); await p.waitForTimeout(300);
+  if (!/Conectado/.test(await p.locator('#hres').innerText())) await falhar('testar conexão do Holyrics');
+  await foto(p, 'holyrics');
+  await p.click('.md [data-a="fecharModal"]');
+  await p.locator('.card', { hasText: 'Editado sem internet' }).first().click(); await p.waitForTimeout(400);
+  srv.estado.holyrics.length = 0;
+  await p.click('[data-a="pregar"]'); await p.waitForTimeout(600);
+  const acoes = () => srv.estado.holyrics.map(x => x.acao);
+  if (!acoes().includes('StartCountdownCP') || !srv.estado.holyrics.some(x => x.acao === 'SetTextCP' && /Parte 1 de 7/.test(x.dados.text))) await falhar('telão de retorno ao entrar', acoes());
+  await p.locator('.r-bib [data-a="hProjetar"]').first().click(); await p.waitForTimeout(300);
+  const verso = srv.estado.holyrics.find(x => x.acao === 'ShowVerse');
+  if (!verso || verso.dados.references !== 'Mateus 24:45-47' || verso.dados.quick_presentation !== true) await falhar('projetar versículo', verso);
+  await p.click('[data-a="pgIr"][data-v="1"]'); await p.waitForTimeout(300);
+  if (!srv.estado.holyrics.some(x => x.acao === 'SetTextCP' && /Parte 2 de 7/.test(x.dados.text))) await falhar('telão ao trocar de parte');
+  await foto(p, 'projetar');
+  await p.locator('.r-cit [data-a="hProjetar"]').first().click(); await p.waitForTimeout(300);
+  const citP = srv.estado.holyrics.find(x => x.acao === 'ShowQuickPresentation');
+  if (!citP || !/Escola Sabatina deve ser/.test(citP.dados.text) || !/— Ellen G. White/.test(citP.dados.text)) await falhar('projetar citação', citP);
+  await p.click('[data-a="hLimpar"]'); await p.waitForTimeout(300);
+  await p.click('[data-a="sairPregar"]'); await p.waitForTimeout(300);
+  if (!acoes().includes('CloseCurrentPresentation') || !acoes().includes('StopCountdownCP')) await falhar('limpar tela e encerrar o telão', acoes());
   passou();
 
   const banner = await p.locator('#erro-fatal').count();
