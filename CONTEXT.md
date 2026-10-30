@@ -290,7 +290,7 @@ Chamadas pela página via `doPost` (ver "Arquitetura"); também podem ser rodada
       - a paleta "Inserir" tem **"Citação de Ellen White"** (`/e`, tipo virtual `egw` que cria um `citacao` com o autor na fonte);
       - **"Conferir no EGW Writings"** abre `egwwritings.org/search` com as primeiras 12 palavras da citação;
       - **"Conferida na fonte"** (`conferida: true`): a legenda mostra "N citações a conferir", e o modo Pregar marca "conferir" ao lado da fonte. Editar o texto ou a fonte desmarca sozinho. Fonte de Ellen White sem página mostra "Falta a página na fonte";
-      - não há API: a do EGW Writings (`a.egwwritings.org`) exige registro do app, e o aviso legal do White Estate só fala de uso justo de citações breves. A integração automática ficou para quando houver autorização;
+      - **decisão (30/out/2026): sem integração com a API do EGW Writings.** Ela existe (`a.egwwritings.org`, login em `cpanel.egwwritings.org`, aceita `client_credentials` com as permissões `writings` e `search`), mas exige registrar o app e respondeu 403 em HTML (possível bloqueio do Cloudflare) aos servidores do Google. Além disso, o aviso legal do White Estate só fala de uso justo de citações breves. O Caio prefere pesquisar as citações no NotebookLM e inseri-las à mão; a marca "Conferida na fonte" continua sendo o controle de que o texto é literal;
     - **teleprompter (opcional, por sermão):**
       - liga e desliga pela pílula "Teleprompter" do editor (`opcoes.teleprompter`);
       - ligado, o texto rola sozinho (`teleQuadro()`, com `requestAnimationFrame`). A velocidade é a distância a rolar dividida pelos segundos previstos para a parte, vezes um fator de 0,5× a 2× (botões − e +);
